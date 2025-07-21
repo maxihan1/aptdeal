@@ -91,6 +91,8 @@ app.prepare().then(() => {
         buildYear: deal.건축년도 || deal.buildYear || '',
         dealMonth: deal.월 || deal.dealMonth || '',
         dealDay: deal.일 || deal.dealDay || '',
+        tradeType: deal.거래유형 || deal.dealingGbn || deal.tradeType || '',
+        cdealType: deal.계약해제 || deal.cdealType || '',
       }));
       res.json(result);
     } catch (e) {

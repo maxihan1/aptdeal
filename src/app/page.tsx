@@ -19,6 +19,8 @@ interface Deal {
   buildYear: string | number;
   dealMonth: string | number;
   dealDay: string | number;
+  tradeType?: string;
+  cdealType?: string;
 }
 
 interface RegionOption {
@@ -48,7 +50,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<RegionOption[]>([]);
 
   // 정렬 상태
-  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName' | 'buildYear'>('date');
+  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // 선택 예약 상태
@@ -70,6 +72,9 @@ export default function Home() {
       } else if (sortField === 'price' || sortField === 'area' || sortField === 'buildYear') {
         aValue = Number(a[sortField]);
         bValue = Number(b[sortField]);
+      } else if (sortField === 'cdealType') {
+        aValue = String(a.cdealType || '');
+        bValue = String(b.cdealType || '');
       } else {
         aValue = String(a[sortField]);
         bValue = String(b[sortField]);
@@ -84,7 +89,7 @@ export default function Home() {
   };
 
   // 정렬 토글 함수
-  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear') => {
+  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType') => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -94,7 +99,7 @@ export default function Home() {
   };
 
   // 정렬 아이콘 렌더링
-  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear') => {
+  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType') => {
     if (sortField !== field) {
       return <ArrowUpDown className="h-4 w-4" />;
     }
@@ -228,6 +233,8 @@ export default function Home() {
         buildYear: item.buildYear || '',
         dealMonth: item.dealMonth || '',
         dealDay: item.dealDay || '',
+        tradeType: item.tradeType || item.dealingGbn || item["거래유형"],
+        cdealType: item.cdealType || item["계약해제"],
       }));
       // '전체'가 아닌 경우에만 동 필터링
       let filtered = dong && dong !== "ALL"
@@ -289,7 +296,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* 필터 & 즐겨찾기 */}
-          <div className="flex flex-col gap-6 w-full lg:w-1/3">
+          <div className="flex flex-col gap-6 w-full lg:w-1/4">
             {/* 검색 필터 영역 */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
@@ -379,7 +386,7 @@ export default function Home() {
           </div>
           
           {/* 거래 데이터 리스트 */}
-          <div className="flex-1 flex flex-col gap-4">
+          <div className="w-full lg:w-3/4 flex flex-col gap-4">
             {/* 데이터 영역 헤더 */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 border-b border-gray-200">
@@ -400,7 +407,7 @@ export default function Home() {
                     {/* 거래 데이터 표(모바일/PC 동일) */}
                     <div className="overflow-x-auto">
                       <div className="max-h-96 overflow-y-auto border rounded-lg">
-                        <table className="min-w-full text-sm relative">
+                        <table className="min-w-full text-[12px] relative">
                           <thead className="sticky top-0 z-10">
                             <tr className="bg-gray-100 border-b">
                               <th className="border px-2 py-1 bg-gray-100">지역</th>
@@ -424,7 +431,14 @@ export default function Home() {
                                   {getSortIcon('date')}
                                 </div>
                               </th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('buildYear')}>
+                              <th className="border px-2 py-1 bg-gray-100">거래유형</th>
+                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('cdealType')}>
+                                <div className="flex items-center justify-between">
+                                  계약해제
+                                  {getSortIcon('cdealType')}
+                                </div>
+                              </th>
+                              <th className="border px-2 py-1 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('buildYear')}>
                                 <div className="flex items-center justify-between">
                                   건축년도
                                   {getSortIcon('buildYear')}
@@ -441,6 +455,8 @@ export default function Home() {
                                 <td className="border px-2 py-1">{deal.area}</td>
                                 <td className="border px-2 py-1 font-medium text-blue-600">{formatKoreanPrice(deal.price)}</td>
                                 <td className="border px-2 py-1">{deal.date}</td>
+                                <td className="border px-2 py-1">{deal.tradeType || deal.dealingGbn || deal["거래유형"] || ''}</td>
+                                <td className="border px-2 py-1">{deal.cdealType || deal["계약해제"] || ''}</td>
                                 <td className="border px-2 py-1">{deal.buildYear}</td>
                               </tr>
                             ))}

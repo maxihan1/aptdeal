@@ -90,7 +90,8 @@ app.get("/api/deals", async (req, res) => {
       buildYear: deal.건축년도 || deal.buildYear || '', // 건축년도
       dealMonth: deal.월 || deal.dealMonth || '', // 계약월
       dealDay: deal.일 || deal.dealDay || '',     // 계약일
-      // 필요시 추가 필드
+      tradeType: deal.거래유형 || deal.dealingGbn || deal.tradeType || '', // 거래유형
+      cdealType: deal.계약해제 || deal.cdealType || '', // 계약해제
     }));
     res.json(result);
   } catch (e) {
