@@ -3,10 +3,7 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Star, Search, Home as HomeIcon, Calendar, Building2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Star, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import axios from "axios";
 
 // 타입 정의
@@ -64,18 +61,18 @@ export default function Home() {
   // 정렬 함수
   const sortDeals = (deals: Deal[]) => {
     return [...deals].sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
+      let aValue: string | number | Date;
+      let bValue: string | number | Date;
       
       if (sortField === 'date') {
         aValue = new Date(a.date).getTime();
         bValue = new Date(b.date).getTime();
       } else if (sortField === 'price' || sortField === 'area') {
-        aValue = Number(aValue);
-        bValue = Number(bValue);
+        aValue = Number(a[sortField]);
+        bValue = Number(b[sortField]);
       } else {
-        aValue = String(aValue);
-        bValue = String(bValue);
+        aValue = String(a[sortField]);
+        bValue = String(b[sortField]);
       }
       
       if (sortOrder === 'asc') {
@@ -119,9 +116,12 @@ export default function Home() {
     setCurrentPage(1);
   }, [deals]);
 
+  // API 기본 URL 설정
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+
   // 시도 불러오기
   useEffect(() => {
-    axios.get<RegionOption[]>("http://localhost:4000/api/regions/sido").then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/sido`).then(res => {
       setSidoOptions(res.data);
     });
   }, []);
@@ -135,13 +135,13 @@ export default function Home() {
       setDong("");
       return;
     }
-    axios.get<RegionOption[]>("http://localhost:4000/api/regions/sigungu", { params: { sido } }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/sigungu`, { params: { sido } }).then(res => {
       setSigunguOptions(res.data);
       setSigungu("");
       setDongOptions([]);
       setDong("");
     });
-  }, [sido]);
+  }, [sido, API_BASE_URL]);
 
   // 읍면동 불러오기
   useEffect(() => {
@@ -150,11 +150,11 @@ export default function Home() {
       setDong("");
       return;
     }
-    axios.get<RegionOption[]>("http://localhost:4000/api/regions/dong", { params: { sigungu } }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/dong`, { params: { sigungu } }).then(res => {
       setDongOptions(res.data);
       setDong("");
     });
-  }, [sigungu]);
+  }, [sigungu, API_BASE_URL]);
 
   // 즐겨찾기 불러오기
   useEffect(() => {
@@ -216,7 +216,7 @@ export default function Home() {
     setLoading(true);
     try {
       // 동 파라미터 없이 시/구 단위로만 조회
-      const res = await axios.get<Deal[]>(`http://localhost:4000/api/deals`, {
+      const res = await axios.get<Deal[]>(`${API_BASE_URL}/api/deals`, {
         params: { sido, sigungu, startDate, endDate },
       });
       // 서버 응답을 Deal 타입에 맞게 매핑
