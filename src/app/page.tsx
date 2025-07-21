@@ -48,7 +48,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<RegionOption[]>([]);
 
   // 정렬 상태
-  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName'>('date');
+  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName' | 'buildYear'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // 선택 예약 상태
@@ -67,7 +67,7 @@ export default function Home() {
       if (sortField === 'date') {
         aValue = new Date(a.date).getTime();
         bValue = new Date(b.date).getTime();
-      } else if (sortField === 'price' || sortField === 'area') {
+      } else if (sortField === 'price' || sortField === 'area' || sortField === 'buildYear') {
         aValue = Number(a[sortField]);
         bValue = Number(b[sortField]);
       } else {
@@ -84,7 +84,7 @@ export default function Home() {
   };
 
   // 정렬 토글 함수
-  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName') => {
+  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear') => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -94,7 +94,7 @@ export default function Home() {
   };
 
   // 정렬 아이콘 렌더링
-  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName') => {
+  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear') => {
     if (sortField !== field) {
       return <ArrowUpDown className="h-4 w-4" />;
     }
@@ -105,11 +105,6 @@ export default function Home() {
   const sortedDeals = sortDeals(deals);
   const totalPages = Math.ceil(sortedDeals.length / itemsPerPage);
   const pagedDeals = sortedDeals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  // 페이지 변경 시 스크롤 맨 위로 이동(선택)
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
 
   // deals가 바뀌면 1페이지로 초기화
   useEffect(() => {
@@ -151,7 +146,8 @@ export default function Home() {
       return;
     }
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/dong`, { params: { sigungu } }).then(res => {
-      setDongOptions(res.data);
+      // '전체' 항목 추가
+      setDongOptions([{ code: "ALL", name: "전체" }, ...res.data]);
       setDong("");
     });
   }, [sigungu, API_BASE_URL]);
@@ -215,10 +211,10 @@ export default function Home() {
     if (!sido || !sigungu || !startDate || !endDate) return;
     setLoading(true);
     try {
-      // 동 파라미터 없이 시/구 단위로만 조회
-      const res = await axios.get<Deal[]>(`${API_BASE_URL}/api/deals`, {
-        params: { sido, sigungu, startDate, endDate },
-      });
+      // '전체' 선택 시 dong 파라미터 없이 조회
+      const params: any = { sido, sigungu, startDate, endDate };
+      if (dong && dong !== "ALL") params.dong = dong;
+      const res = await axios.get<Deal[]>(`${API_BASE_URL}/api/deals`, { params });
       // 서버 응답을 Deal 타입에 맞게 매핑
       const mapped = res.data.map((item, idx) => ({
         id: item.id || `${sigungu}-${idx}`,
@@ -233,8 +229,10 @@ export default function Home() {
         dealMonth: item.dealMonth || '',
         dealDay: item.dealDay || '',
       }));
-      // 동 필터링(프론트에서)
-      let filtered = dong ? mapped.filter(deal => deal.region.includes(dong) || String(deal.address).includes(dong)) : mapped;
+      // '전체'가 아닌 경우에만 동 필터링
+      let filtered = dong && dong !== "ALL"
+        ? mapped.filter(deal => deal.region.includes(dong) || String(deal.address).includes(dong))
+        : mapped;
       // 일자 필터링(프론트에서)
       if (startDate && endDate) {
         const start = new Date(startDate);
@@ -252,6 +250,18 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  // 거래금액 한글 억/천 단위 포맷 함수
+  function formatKoreanPrice(price: number): string {
+    if (isNaN(price) || price === 0) return '-';
+    const eok = Math.floor(price / 10000);
+    const chun = price % 10000;
+    let result = '';
+    if (eok > 0) result += `${eok}억`;
+    if (chun > 0) result += `${eok > 0 ? chun.toLocaleString() : chun.toLocaleString()}만원`;
+    else if (eok > 0) result += '만원';
+    return result;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -387,19 +397,14 @@ export default function Home() {
                   <div className="text-center text-gray-400">조회 결과가 없습니다.</div>
                 ) : (
                   <>
-                    {/* 데스크톱 테이블 */}
-                    <div className="hidden lg:block overflow-x-auto">
+                    {/* 거래 데이터 표(모바일/PC 동일) */}
+                    <div className="overflow-x-auto">
                       <div className="max-h-96 overflow-y-auto border rounded-lg">
                         <table className="min-w-full text-sm relative">
                           <thead className="sticky top-0 z-10">
                             <tr className="bg-gray-100 border-b">
                               <th className="border px-2 py-1 bg-gray-100">지역</th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('aptName')}>
-                                <div className="flex items-center justify-between">
-                                  단지명
-                                  {getSortIcon('aptName')}
-                                </div>
-                              </th>
+                              <th className="border px-2 py-1 bg-gray-100">단지명</th>
                               <th className="border px-2 py-1 bg-gray-100">층</th>
                               <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('area')}>
                                 <div className="flex items-center justify-between">
@@ -413,12 +418,16 @@ export default function Home() {
                                   {getSortIcon('price')}
                                 </div>
                               </th>
-                              <th className="border px-2 py-1 bg-gray-100">계약 월</th>
-                              <th className="border px-2 py-1 bg-gray-100">계약 일</th>
                               <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('date')}>
                                 <div className="flex items-center justify-between">
-                                  건축년도
+                                  계약일
                                   {getSortIcon('date')}
+                                </div>
+                              </th>
+                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('buildYear')}>
+                                <div className="flex items-center justify-between">
+                                  건축년도
+                                  {getSortIcon('buildYear')}
                                 </div>
                               </th>
                             </tr>
@@ -430,16 +439,14 @@ export default function Home() {
                                 <td className="border px-2 py-1">{deal.aptName}</td>
                                 <td className="border px-2 py-1">{deal.floor}</td>
                                 <td className="border px-2 py-1">{deal.area}</td>
-                                <td className="border px-2 py-1 font-medium text-blue-600">{deal.price}</td>
-                                <td className="border px-2 py-1">{deal.dealMonth}</td>
-                                <td className="border px-2 py-1">{deal.dealDay}</td>
+                                <td className="border px-2 py-1 font-medium text-blue-600">{formatKoreanPrice(deal.price)}</td>
+                                <td className="border px-2 py-1">{deal.date}</td>
                                 <td className="border px-2 py-1">{deal.buildYear}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      
                       {/* 페이지네이션 */}
                       {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-4">
@@ -464,35 +471,6 @@ export default function Home() {
                           </Button>
                         </div>
                       )}
-                    </div>
-
-                    {/* 모바일 카드 리스트 */}
-                    <div className="lg:hidden space-y-3">
-                      {deals.map((deal) => (
-                        <div key={deal.id} className="bg-white border rounded-lg p-4 shadow-sm">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold text-gray-900 truncate">{deal.aptName}</h3>
-                            <span className="text-lg font-bold text-blue-600">{deal.price}만원</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                            <div>
-                              <span className="font-medium">지역:</span> {deal.region}
-                            </div>
-                            <div>
-                              <span className="font-medium">층:</span> {deal.floor}층
-                            </div>
-                            <div>
-                              <span className="font-medium">면적:</span> {deal.area}㎡
-                            </div>
-                            <div>
-                              <span className="font-medium">계약일:</span> {deal.dealMonth}/{deal.dealDay}
-                            </div>
-                            <div className="col-span-2">
-                              <span className="font-medium">건축년도:</span> {deal.buildYear}년
-                            </div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   </>
                 )}
