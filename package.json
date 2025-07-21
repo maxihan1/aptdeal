@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
+    "api": "node api-server.js",
     "lint": "next lint",
     "postinstall": "npm run build"
   },
