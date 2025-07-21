@@ -18,20 +18,20 @@ const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
 const regionsLawdPath = path.join(__dirname, "regions_with_lawdcd.json");
 const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
 
-// 시도 목록
-app.get("/api/regions/sido", (req, res) => {
+// 광역시/도 목록
+app.get("/api/regions/provinces", (req, res) => {
   res.json(regions.sido);
 });
-// 시군구 목록
-app.get("/api/regions/sigungu", (req, res) => {
-  const { sido } = req.query;
-  res.json(regions.sigungu[sido] || []);
+// 시/군/구 목록
+app.get("/api/regions/cities", (req, res) => {
+  const { province } = req.query;
+  res.json(regions.sigungu[province] || []);
 });
 // 읍면동 목록
-app.get("/api/regions/dong", (req, res) => {
-  let { sigungu } = req.query;
-  sigungu = decodeURIComponent((sigungu || "").trim());
-  res.json(regions.dong ? (regions.dong[sigungu] || []) : []);
+app.get("/api/regions/neighborhoods", (req, res) => {
+  let { city } = req.query;
+  city = decodeURIComponent((city || "").trim());
+  res.json(regions.dong ? (regions.dong[city] || []) : []);
 });
 
 // 시군구명 → lawd_cd 매핑 함수 (lawd_cd 직접 전달도 허용)

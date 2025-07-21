@@ -37,19 +37,19 @@ app.prepare().then(() => {
   server.use(express.json());
   
   // API 라우트
-  server.get('/api/regions/sido', (req, res) => {
+  server.get('/api/regions/provinces', (req, res) => {
     res.json(regions.sido);
   });
 
-  server.get('/api/regions/sigungu', (req, res) => {
-    const { sido } = req.query;
-    res.json(regions.sigungu[sido] || []);
+  server.get('/api/regions/cities', (req, res) => {
+    const { province } = req.query;
+    res.json(regions.sigungu[province] || []);
   });
 
-  server.get('/api/regions/dong', (req, res) => {
-    let { sigungu } = req.query;
-    sigungu = decodeURIComponent((sigungu || "").trim());
-    res.json(regions.dong ? (regions.dong[sigungu] || []) : []);
+  server.get('/api/regions/neighborhoods', (req, res) => {
+    let { city } = req.query;
+    city = decodeURIComponent((city || "").trim());
+    res.json(regions.dong ? (regions.dong[city] || []) : []);
   });
 
   server.get('/api/deals', async (req, res) => {

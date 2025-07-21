@@ -116,7 +116,7 @@ export default function Home() {
 
   // 시도 불러오기
   useEffect(() => {
-    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/sido`).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/provinces`).then(res => {
       setSidoOptions(res.data);
     });
   }, []);
@@ -130,7 +130,7 @@ export default function Home() {
       setDong("");
       return;
     }
-    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/sigungu`, { params: { sido } }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/cities`, { params: { province: sido } }).then(res => {
       setSigunguOptions(res.data);
       setSigungu("");
       setDongOptions([]);
@@ -145,7 +145,7 @@ export default function Home() {
       setDong("");
       return;
     }
-    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/dong`, { params: { sigungu } }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { params: { city: sigungu } }).then(res => {
       // '전체' 항목 추가
       setDongOptions([{ code: "ALL", name: "전체" }, ...res.data]);
       setDong("");
