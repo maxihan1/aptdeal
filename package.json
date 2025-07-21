@@ -1,12 +1,13 @@
 {
-  "name": "web",
-  "version": "0.1.0",
+  "name": "aptdeal-web",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
@@ -38,9 +39,13 @@
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
   },
-  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "description": "APTDEAL - 아파트 실거래가 조회 서비스",
+  "main": "server.js",
+  "keywords": ["apt", "real-estate", "nextjs", "express", "api"],
+  "author": "APTDEAL Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
 }

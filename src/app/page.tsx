@@ -117,7 +117,7 @@ export default function Home() {
   }, [deals]);
 
   // API 기본 URL 설정
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
   // 시도 불러오기
   useEffect(() => {
