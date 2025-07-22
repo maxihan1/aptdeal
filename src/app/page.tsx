@@ -781,6 +781,7 @@ export default function Home() {
                     )}
 
                     {/* 단지명+전용면적 선택 시 가격 추이 라인차트 (거래내역 아래) - 이 부분을 dealType === 'trade' 조건으로 감싼다 */}
+                    {/* 매매(거래금액) 차트 */}
                     {dealType === 'trade' && selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mt-6">
                         <h3 className="font-semibold text-gray-800 mb-2">가격 추이 (전용면적 {selectedArea}㎡)</h3>
@@ -804,39 +805,26 @@ export default function Home() {
                         </ResponsiveContainer>
                       </div>
                     )}
-
-                    {/* 매매(거래금액) 차트는 반드시 dealType === 'trade' 조건에서만 렌더링 */}
-                    {dealType === 'trade' && selectedAptName && selectedArea !== null && (
-                      <div className="my-4">
-                        <h3 className="font-semibold mb-2">월별 거래금액 추이</h3>
-                        <ResponsiveContainer width="100%" height={240}>
-                          <LineChart data={filteredDeals.filter(d => d.aptName === selectedAptName && d.area === selectedArea).map(d => ({
-                            month: d.date.slice(0,7),
-                            price: d.price,
-                          }))}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => formatKoreanPrice(Number(value))} />
-                            <Line type="monotone" dataKey="price" stroke="#8884d8" name="거래금액" />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
                     {/* 전월세(전세 보증금) 차트 */}
-                    {dealType === 'rent' && selectedAptName && selectedArea !== null && (
-                      <div className="my-4">
-                        <h3 className="font-semibold mb-2">전세 보증금 추이</h3>
-                        <ResponsiveContainer width="100%" height={240}>
-                          <LineChart data={filteredDeals.filter(d => d.aptName === selectedAptName && d.area === selectedArea && Number(d.monthlyRent) === 0).map(d => ({
-                            month: d.date.slice(0,7),
-                            deposit: d.deposit,
-                          }))}>
+                    {dealType === 'rent' && selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mt-6">
+                        <h3 className="font-semibold text-gray-800 mb-2">전세 보증금 추이</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart
+                            data={filteredDeals.filter(d => Number(d.monthlyRent) === 0)
+                              .map(deal => ({
+                                date: deal.date,
+                                deposit: deal.deposit
+                              }))
+                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            }
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                          >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => formatKoreanPrice(Number(value))} />
-                            <Line type="monotone" dataKey="deposit" stroke="#8884d8" name="보증금" />
+                            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
+                            <Tooltip formatter={v => v.toLocaleString() + '만원'} labelFormatter={l => `계약일: ${l}`} />
+                            <Line type="monotone" dataKey="deposit" stroke="#8884d8" strokeWidth={2} dot={{ r: 3 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
