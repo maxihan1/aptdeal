@@ -8,6 +8,7 @@ import { Star, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-reac
 import axios from "axios";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 // 타입 정의
 interface Deal {
@@ -51,6 +52,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [selectedAptName, setSelectedAptName] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<number | null>(null);
 
   // 데이터 상태
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -117,9 +119,12 @@ export default function Home() {
     return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
-  // 필터링: 단지명 선택 시 해당 단지만, 동 선택 시 해당 동만, 아니면 전체
+  // 필터링: 단지명+전용면적, 동, 전체
   const filteredDeals = selectedAptName
-    ? sortDeals(deals).filter(deal => deal.aptName === selectedAptName)
+    ? sortDeals(deals).filter(deal =>
+        deal.aptName === selectedAptName &&
+        (selectedArea === null || deal.area === selectedArea)
+      )
     : dong && dong !== "ALL"
       ? sortDeals(deals).filter(deal => deal.region.includes(dong) || String(deal.address).includes(dong))
       : sortDeals(deals);
@@ -515,10 +520,54 @@ export default function Home() {
               
               {selectedAptName && (
                 <div className="p-3">
-                  <Button onClick={() => setSelectedAptName(null)} variant="outline" className="mb-2">
+                  <Button onClick={() => { setSelectedAptName(null); setSelectedArea(null); }} variant="outline" className="mb-2">
                     전체 보기
                   </Button>
                   <span className="ml-2 text-blue-700 font-semibold">{selectedAptName} 단지명만 표시 중</span>
+                  {/* 전용면적 버튼 */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Array.from(new Set(sortDeals(deals).filter(deal => deal.aptName === selectedAptName).map(deal => deal.area))).map(area => (
+                      <Button
+                        key={area}
+                        size="sm"
+                        variant={selectedArea === area ? 'default' : 'outline'}
+                        onClick={() => setSelectedArea(area as number)}
+                        className="text-xs"
+                      >
+                        {area}㎡
+                      </Button>
+                    ))}
+                    {selectedArea !== null && (
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedArea(null)} className="text-xs">
+                        전체 면적
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 단지명+전용면적 선택 시 가격 추이 라인차트 */}
+              {selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-4">
+                  <h3 className="font-semibold text-gray-800 mb-2">가격 추이 (전용면적 {selectedArea}㎡)</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart
+                      data={filteredDeals
+                        .map(deal => ({
+                          date: deal.date,
+                          price: deal.price
+                        }))
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                      }
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
+                      <Tooltip formatter={v => v.toLocaleString() + '만원'} labelFormatter={l => `계약일: ${l}`} />
+                      <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
@@ -577,7 +626,7 @@ export default function Home() {
                                 <td className="border px-2 py-1">{deal.region}</td>
                                 <td className="border px-2 py-1">
                                   <span
-                                    onClick={() => setSelectedAptName(deal.aptName)}
+                                    onClick={() => { setSelectedAptName(deal.aptName); setSelectedArea(null); }}
                                     className="cursor-pointer text-blue-700 underline hover:text-blue-900"
                                   >
                                     {deal.aptName}
@@ -606,7 +655,7 @@ export default function Home() {
                             <div className="flex justify-between items-start">
                               <h3 className="font-semibold text-gray-900 text-sm truncate flex-1 mr-2">
                                 <span
-                                  onClick={() => setSelectedAptName(deal.aptName)}
+                                  onClick={() => { setSelectedAptName(deal.aptName); setSelectedArea(null); }}
                                   className="cursor-pointer text-blue-700 underline hover:text-blue-900"
                                 >
                                   {deal.aptName}
