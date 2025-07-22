@@ -50,6 +50,7 @@ export default function Home() {
   const [dong, setDong] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [selectedAptName, setSelectedAptName] = useState<string | null>(null);
 
   // 데이터 상태
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -116,10 +117,12 @@ export default function Home() {
     return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
-  // 페이지네이션 계산
-  const sortedDeals = sortDeals(deals);
-  const totalPages = Math.ceil(sortedDeals.length / itemsPerPage);
-  const pagedDeals = sortedDeals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // 필터링: 단지명 선택 시 해당 단지만, 아니면 전체
+  const filteredDeals = selectedAptName
+    ? sortDeals(deals).filter(deal => deal.aptName === selectedAptName)
+    : sortDeals(deals);
+  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  const pagedDeals = filteredDeals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // deals가 바뀌면 1페이지로 초기화
   useEffect(() => {
@@ -508,6 +511,15 @@ export default function Home() {
                 </div>
               </div>
               
+              {selectedAptName && (
+                <div className="p-3">
+                  <Button onClick={() => setSelectedAptName(null)} variant="outline" className="mb-2">
+                    전체 보기
+                  </Button>
+                  <span className="ml-2 text-blue-700 font-semibold">{selectedAptName} 단지명만 표시 중</span>
+                </div>
+              )}
+
               <div className="p-4">
                 {loading ? (
                   <div className="text-center text-gray-500">조회 중...</div>
@@ -561,7 +573,14 @@ export default function Home() {
                             {pagedDeals.map((deal) => (
                               <tr key={deal.id} className="even:bg-gray-50 hover:bg-gray-100 transition-colors">
                                 <td className="border px-2 py-1">{deal.region}</td>
-                                <td className="border px-2 py-1">{deal.aptName}</td>
+                                <td className="border px-2 py-1">
+                                  <span
+                                    onClick={() => setSelectedAptName(deal.aptName)}
+                                    className="cursor-pointer text-blue-700 underline hover:text-blue-900"
+                                  >
+                                    {deal.aptName}
+                                  </span>
+                                </td>
                                 <td className="border px-2 py-1">{deal.floor}</td>
                                 <td className="border px-2 py-1">{deal.area}</td>
                                 <td className="border px-2 py-1 font-medium text-blue-600">{formatKoreanPrice(deal.price)}</td>
@@ -584,7 +603,12 @@ export default function Home() {
                             {/* 단지명과 가격 */}
                             <div className="flex justify-between items-start">
                               <h3 className="font-semibold text-gray-900 text-sm truncate flex-1 mr-2">
-                                {deal.aptName}
+                                <span
+                                  onClick={() => setSelectedAptName(deal.aptName)}
+                                  className="cursor-pointer text-blue-700 underline hover:text-blue-900"
+                                >
+                                  {deal.aptName}
+                                </span>
                               </h3>
                               <span className="font-bold text-blue-600 text-lg whitespace-nowrap">
                                 {formatKoreanPrice(deal.price)}
