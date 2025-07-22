@@ -1,10 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Star, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Star, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import axios from "axios";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 // 타입 정의
 interface Deal {
@@ -63,6 +66,9 @@ export default function Home() {
   // 페이지네이션 상태 추가
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
+
+  // 거래내역 영역 참조
+  const dealsSectionRef = useRef<HTMLDivElement>(null);
 
   // 정렬 함수
   const sortDeals = (deals: Deal[]) => {
@@ -279,6 +285,19 @@ export default function Home() {
     return result;
   }
 
+  // 페이지 변경 함수 (모바일에서 스크롤 포함)
+  const changePage = (newPage: number) => {
+    setCurrentPage(newPage);
+    
+    // 모바일에서 거래내역 영역으로 스크롤
+    if (dealsSectionRef.current && window.innerWidth < 1024) {
+      dealsSectionRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 영역 */}
@@ -304,8 +323,8 @@ export default function Home() {
       {/* 메인 컨텐츠 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
-          {/* 필터 & 즐겨찾기 */}
-          <div className="flex flex-col gap-6 w-full lg:w-1/4">
+          {/* 필터 & 즐겨찾기 - 스크롤 가능한 사이드바 */}
+          <div className="flex flex-col gap-6 w-full lg:w-80 lg:max-w-80 lg:flex-shrink-0">
             {/* 검색 필터 영역 */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
@@ -317,7 +336,8 @@ export default function Home() {
                 </h2>
               </div>
               <div className="p-4 space-y-4">
-                <div className="flex flex-col sm:flex-row gap-2">
+                {/* 지역 선택 */}
+                <div className="space-y-3">
                   <Select value={sido} onValueChange={setSido}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="시도 선택" />
@@ -349,15 +369,64 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="w-full" placeholder="시작일" />
-                  <Input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} className="w-full" placeholder="종료일" />
+                
+                {/* 날짜 선택 */}
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">시작일</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(new Date(startDate), "PPP", { locale: ko }) : "날짜 선택"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={startDate ? new Date(startDate) : undefined}
+                          onSelect={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                          initialFocus
+                          locale={ko}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">종료일</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(new Date(endDate), "PPP", { locale: ko }) : "날짜 선택"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate ? new Date(endDate) : undefined}
+                          onSelect={(date) => setEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                          initialFocus
+                          locale={ko}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button onClick={fetchDeals} disabled={loading} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
+                
+                {/* 버튼 */}
+                <div className="space-y-2">
+                  <Button onClick={fetchDeals} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                     🔍 조회
                   </Button>
-                  <Button variant="outline" onClick={addFavorite} disabled={!sido || !sigungu || !dong} className="w-full sm:w-auto border-yellow-300 text-yellow-700 hover:bg-yellow-50">
+                  <Button variant="outline" onClick={addFavorite} disabled={!sido || !sigungu || !dong} className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50">
                     <Star className="w-4 h-4 mr-1" /> 즐겨찾기
                   </Button>
                 </div>
@@ -374,7 +443,7 @@ export default function Home() {
                   즐겨찾기 지역
                 </h2>
               </div>
-              <div className="p-4">
+              <div className="p-4 max-h-64 overflow-y-auto">
                 {favorites.length === 0 ? (
                   <div className="text-gray-400 text-sm text-center py-4">등록된 즐겨찾기 지역이 없습니다.</div>
                 ) : (
@@ -395,7 +464,7 @@ export default function Home() {
           </div>
           
           {/* 거래 데이터 리스트 */}
-          <div className="w-full lg:w-3/4 flex flex-col gap-4">
+          <div className="flex-1 flex flex-col gap-4 min-w-0" ref={dealsSectionRef}>
             {/* 데이터 영역 헤더 */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 border-b border-gray-200">
@@ -406,6 +475,54 @@ export default function Home() {
                   거래 내역
                 </h2>
               </div>
+              
+              {/* 모바일 정렬 버튼 */}
+              <div className="lg:hidden p-3 border-b border-gray-200 bg-gray-50">
+                <div className="text-sm font-medium text-gray-700 mb-2">정렬</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={sortField === 'area' ? 'default' : 'outline'}
+                    onClick={() => toggleSort('area')}
+                    className="text-xs"
+                  >
+                    전용면적 {getSortIcon('area')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={sortField === 'price' ? 'default' : 'outline'}
+                    onClick={() => toggleSort('price')}
+                    className="text-xs"
+                  >
+                    거래금액 {getSortIcon('price')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={sortField === 'date' ? 'default' : 'outline'}
+                    onClick={() => toggleSort('date')}
+                    className="text-xs"
+                  >
+                    계약일 {getSortIcon('date')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={sortField === 'cdealType' ? 'default' : 'outline'}
+                    onClick={() => toggleSort('cdealType')}
+                    className="text-xs"
+                  >
+                    계약해제 {getSortIcon('cdealType')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={sortField === 'buildYear' ? 'default' : 'outline'}
+                    onClick={() => toggleSort('buildYear')}
+                    className="text-xs"
+                  >
+                    건축년도 {getSortIcon('buildYear')}
+                  </Button>
+                </div>
+              </div>
+              
               <div className="p-4">
                 {loading ? (
                   <div className="text-center text-gray-500">조회 중...</div>
@@ -413,8 +530,8 @@ export default function Home() {
                   <div className="text-center text-gray-400">조회 결과가 없습니다.</div>
                 ) : (
                   <>
-                    {/* 거래 데이터 표(모바일/PC 동일) */}
-                    <div className="overflow-x-auto">
+                    {/* PC/태블릿 가로모드: 테이블 형태 */}
+                    <div className="hidden lg:block overflow-x-auto">
                       <div className="max-h-96 overflow-y-auto border rounded-lg">
                         <table className="min-w-full text-[12px] relative">
                           <thead className="sticky top-0 z-10">
@@ -472,31 +589,84 @@ export default function Home() {
                           </tbody>
                         </table>
                       </div>
-                      {/* 페이지네이션 */}
-                      {totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-2 mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            이전
-                          </Button>
-                          <span className="text-sm text-gray-600">
-                            {currentPage} / {totalPages}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            다음
-                          </Button>
-                        </div>
-                      )}
                     </div>
+
+                    {/* 모바일 세로모드: 카드 형태 */}
+                    <div className="lg:hidden space-y-3">
+                      {pagedDeals.map((deal) => (
+                        <div key={deal.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                          <div className="space-y-2">
+                            {/* 단지명과 가격 */}
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-semibold text-gray-900 text-sm truncate flex-1 mr-2">
+                                {deal.aptName}
+                              </h3>
+                              <span className="font-bold text-blue-600 text-lg whitespace-nowrap">
+                                {formatKoreanPrice(deal.price)}
+                              </span>
+                            </div>
+                            
+                            {/* 지역 정보 */}
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">{deal.region}</span>
+                            </div>
+                            
+                            {/* 상세 정보 그리드 */}
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                              <div className="flex justify-between">
+                                <span>층:</span>
+                                <span className="font-medium">{deal.floor}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>면적:</span>
+                                <span className="font-medium">{deal.area}㎡</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>계약일:</span>
+                                <span className="font-medium">{deal.date}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>건축년도:</span>
+                                <span className="font-medium">{deal.buildYear}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>거래유형:</span>
+                                <span className="font-medium">{deal.tradeType || deal.dealingGbn || deal["거래유형"] || '-'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>계약해제:</span>
+                                <span className="font-medium">{deal.cdealType || deal["계약해제"] || '-'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 페이지네이션 */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => changePage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          이전
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => changePage(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          다음
+                        </Button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

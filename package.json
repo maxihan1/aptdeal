@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
@@ -19,12 +20,14 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "fast-xml-parser": "^5.2.5",
     "lucide-react": "^0.525.0",
     "next": "15.4.1",
     "react": "19.1.0",
+    "react-day-picker": "^9.8.0",
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1"
   },
@@ -42,7 +45,13 @@
   },
   "description": "APTDEAL - 아파트 실거래가 조회 서비스",
   "main": "server.js",
-  "keywords": ["apt", "real-estate", "nextjs", "express", "api"],
+  "keywords": [
+    "apt",
+    "real-estate",
+    "nextjs",
+    "express",
+    "api"
+  ],
   "author": "APTDEAL Team",
   "license": "MIT",
   "engines": {
