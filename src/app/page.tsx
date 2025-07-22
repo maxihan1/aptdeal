@@ -117,10 +117,12 @@ export default function Home() {
     return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
-  // 필터링: 단지명 선택 시 해당 단지만, 아니면 전체
+  // 필터링: 단지명 선택 시 해당 단지만, 동 선택 시 해당 동만, 아니면 전체
   const filteredDeals = selectedAptName
     ? sortDeals(deals).filter(deal => deal.aptName === selectedAptName)
-    : sortDeals(deals);
+    : dong && dong !== "ALL"
+      ? sortDeals(deals).filter(deal => deal.region.includes(dong) || String(deal.address).includes(dong))
+      : sortDeals(deals);
   const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
   const pagedDeals = filteredDeals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
