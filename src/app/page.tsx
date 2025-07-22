@@ -393,6 +393,9 @@ export default function Home() {
                           onSelect={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : "")}
                           initialFocus
                           locale={ko}
+                          captionLayout="dropdown"
+                          fromYear={2000}
+                          toYear={new Date().getFullYear()}
                         />
                       </PopoverContent>
                     </Popover>
@@ -417,6 +420,9 @@ export default function Home() {
                           onSelect={(date) => setEndDate(date ? format(date, "yyyy-MM-dd") : "")}
                           initialFocus
                           locale={ko}
+                          captionLayout="dropdown"
+                          fromYear={2000}
+                          toYear={new Date().getFullYear()}
                         />
                       </PopoverContent>
                     </Popover>

@@ -19,9 +19,14 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  fromYear,
+  toYear,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  captionLayout?: "dropdown" | "buttons" | "label"
+  fromYear?: number
+  toYear?: number
 }) {
   const defaultClassNames = getDefaultClassNames()
 
@@ -35,6 +40,8 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      fromYear={fromYear}
+      toYear={toYear}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),
