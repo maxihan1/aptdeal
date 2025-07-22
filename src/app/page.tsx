@@ -20,7 +20,11 @@ interface Deal {
   dealMonth: string | number;
   dealDay: string | number;
   tradeType?: string;
+  dealingGbn?: string;
   cdealType?: string;
+  '거래유형'?: string;
+  '계약해제'?: string;
+  [key: string]: string | number | undefined; // 인덱스 시그니처 수정
 }
 
 interface RegionOption {
@@ -124,7 +128,7 @@ export default function Home() {
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/provinces`).then(res => {
       setSidoOptions(res.data);
     });
-  }, []);
+  }, [API_BASE_URL]);
 
   // 시군구 불러오기
   useEffect(() => {
@@ -217,7 +221,12 @@ export default function Home() {
     setLoading(true);
     try {
       // '전체' 선택 시 dong 파라미터 없이 조회
-      const params: any = { sido, sigungu, startDate, endDate };
+      const params: { sido: string; sigungu: string; startDate: string; endDate: string; dong?: string } = { 
+        sido, 
+        sigungu, 
+        startDate, 
+        endDate 
+      };
       if (dong && dong !== "ALL") params.dong = dong;
       const res = await axios.get<Deal[]>(`${API_BASE_URL}/api/deals`, { params });
       // 서버 응답을 Deal 타입에 맞게 매핑
@@ -233,8 +242,8 @@ export default function Home() {
         buildYear: item.buildYear || '',
         dealMonth: item.dealMonth || '',
         dealDay: item.dealDay || '',
-        tradeType: item.tradeType || item.dealingGbn || item["거래유형"],
-        cdealType: item.cdealType || item["계약해제"],
+        tradeType: item.tradeType || item.dealingGbn || (item as unknown as Record<string, string>)["거래유형"], // 거래유형
+        cdealType: item.cdealType || (item as unknown as Record<string, string>)["계약해제"], // 계약해제
       }));
       // '전체'가 아닌 경우에만 동 필터링
       let filtered = dong && dong !== "ALL"
