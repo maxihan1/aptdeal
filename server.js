@@ -64,7 +64,7 @@ app.prepare().then(() => {
 
   // 실거래가 API 연동
   server.get("/api/deals", async (req, res) => {
-    const { sido, sigungu, dong, startDate, endDate } = req.query;
+    const { sido, sigungu, dong, startDate, endDate, dealType } = req.query;
     const lawdCd = getLawdCd(sido, sigungu);
     if (!lawdCd || !startDate || !endDate) return res.json([]);
     try {
@@ -73,14 +73,26 @@ app.prepare().then(() => {
       for (const dealYmd of months) {
         let pageNo = 1;
         while (true) {
-          const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`;
-          const params = {
-            serviceKey: SERVICE_KEY,
-            LAWD_CD: lawdCd,
-            DEAL_YMD: dealYmd,
-            numOfRows: 100,
-            pageNo,
-          };
+          let url, params;
+          if (dealType === "rent") {
+            url = "https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent";
+            params = {
+              serviceKey: SERVICE_KEY,
+              LAWD_CD: lawdCd,
+              DEAL_YMD: dealYmd,
+              numOfRows: 100,
+              pageNo,
+            };
+          } else {
+            url = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade";
+            params = {
+              serviceKey: SERVICE_KEY,
+              LAWD_CD: lawdCd,
+              DEAL_YMD: dealYmd,
+              numOfRows: 100,
+              pageNo,
+            };
+          }
           console.log("[공공데이터 API 요청]", url, params);
           const { data } = await axios.get(url, { params, responseType: "text" });
           console.log("[공공데이터 API 응답 일부]", typeof data === 'string' ? data.slice(0, 500) : data);
@@ -93,21 +105,41 @@ app.prepare().then(() => {
           const items = parsed.response?.body?.items?.item || [];
           const deals = Array.isArray(items) ? items : items ? [items] : [];
           if (deals.length === 0) break;
-          allDeals.push(...deals.map((deal, idx) => ({
-            id: `${lawdCd}-${dealYmd}-${pageNo}-${deal.일련번호 || deal.rnum || idx}`,
-            region: `${sido} ${sigungu} ${deal.법정동 || deal.umdNm || ''}`.trim(),
-            address: deal.도로명 || deal.지번 || deal.jibun || '',
-            area: Number(deal.전용면적 || deal.excluUseAr || 0),
-            price: Number((deal.거래금액 || deal.dealAmount || '0').toString().replace(/,/g, '')),
-            date: `${deal.년 || deal.dealYear || ''}-${String(deal.월 || deal.dealMonth || '').padStart(2, '0')}-${String(deal.일 || deal.dealDay || '').padStart(2, '0')}`,
-            aptName: deal.아파트 || deal.aptNm || '',
-            floor: deal.층 || deal.floor || '',
-            buildYear: deal.건축년도 || deal.buildYear || '',
-            dealMonth: deal.월 || deal.dealMonth || '',
-            dealDay: deal.일 || deal.dealDay || '',
-            tradeType: deal.거래유형 || deal.dealingGbn || deal.tradeType || '',
-            cdealType: deal.계약해제 || deal.cdealType || '',
-          })));
+          if (dealType === "rent") {
+            allDeals.push(...deals.map((deal, idx) => ({
+              id: `${lawdCd}-${dealYmd}-${pageNo}-${deal.일련번호 || deal.rnum || idx}`,
+              region: `${sido} ${sigungu} ${deal.법정동 || deal.umdNm || ''}`.trim(),
+              address: deal.도로명 || deal.지번 || deal.jibun || '',
+              area: Number(deal.전용면적 || deal.excluUseAr || 0),
+              deposit: Number((deal.deposit || deal.보증금액 || deal.rentGtn || '0').toString().replace(/,/g, '')),
+              monthlyRent: Number((deal.monthlyRent || deal.월세금액 || deal.rentFee || '0').toString().replace(/,/g, '')),
+              contractType: deal.contractType || deal.임대구분 || deal.rentGbn || '',
+              date: `${deal.dealYear || deal.년 || ''}-${String(deal.dealMonth || deal.월 || '').padStart(2, '0')}-${String(deal.dealDay || deal.일 || '').padStart(2, '0')}`,
+              aptName: deal.아파트 || deal.aptNm || '',
+              floor: deal.층 || deal.floor || '',
+              buildYear: deal.건축년도 || deal.buildYear || '',
+              dealMonth: deal.월 || deal.dealMonth || '',
+              dealDay: deal.일 || deal.dealDay || '',
+              tradeType: deal.임대구분 || deal.rentGbn || deal.tradeType || '',
+              cdealType: deal.계약해제 || deal.cdealType || '',
+            })));
+          } else {
+            allDeals.push(...deals.map((deal, idx) => ({
+              id: `${lawdCd}-${dealYmd}-${pageNo}-${deal.일련번호 || deal.rnum || idx}`,
+              region: `${sido} ${sigungu} ${deal.법정동 || deal.umdNm || ''}`.trim(),
+              address: deal.도로명 || deal.지번 || deal.jibun || '',
+              area: Number(deal.전용면적 || deal.excluUseAr || 0),
+              price: Number((deal.거래금액 || deal.dealAmount || '0').toString().replace(/,/g, '')),
+              date: `${deal.년 || deal.dealYear || ''}-${String(deal.월 || deal.dealMonth || '').padStart(2, '0')}-${String(deal.일 || deal.dealDay || '').padStart(2, '0')}`,
+              aptName: deal.아파트 || deal.aptNm || '',
+              floor: deal.층 || deal.floor || '',
+              buildYear: deal.건축년도 || deal.buildYear || '',
+              dealMonth: deal.월 || deal.dealMonth || '',
+              dealDay: deal.일 || deal.dealDay || '',
+              tradeType: deal.거래유형 || deal.dealingGbn || deal.tradeType || '',
+              cdealType: deal.계약해제 || deal.cdealType || '',
+            })));
+          }
           if (deals.length < 100) break;
           pageNo++;
         }

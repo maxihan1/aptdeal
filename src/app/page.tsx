@@ -9,6 +9,7 @@ import axios from "axios";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // 타입 정의
 interface Deal {
@@ -28,6 +29,9 @@ interface Deal {
   cdealType?: string;
   '거래유형'?: string;
   '계약해제'?: string;
+  deposit?: number;
+  monthlyRent?: number;
+  contractType?: string;
   [key: string]: string | number | undefined; // 인덱스 시그니처 수정
 }
 
@@ -53,6 +57,7 @@ export default function Home() {
   const [endDate, setEndDate] = useState<string>("");
   const [selectedAptName, setSelectedAptName] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
+  const [dealType, setDealType] = useState<"trade" | "rent">("trade");
 
   // 데이터 상태
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -142,6 +147,12 @@ export default function Home() {
       setCurrentPage(1);
     }
   }, [selectedArea]);
+
+  // dealType 변경 시 selectedAptName, selectedArea 초기화
+  useEffect(() => {
+    setSelectedAptName(null);
+    setSelectedArea(null);
+  }, [dealType]);
 
   // API 기본 URL 설정
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -243,13 +254,14 @@ export default function Home() {
     if (!sido || !sigungu || !startDate || !endDate) return;
     setLoading(true);
     try {
-      const params: { sido: string; sigungu: string; startDate: string; endDate: string; dong?: string } = {
+      const params: { sido: string; sigungu: string; startDate: string; endDate: string; dong?: string; dealType?: string } = {
         sido,
         sigungu,
         startDate,
         endDate,
       };
       if (dong && dong !== "ALL") params.dong = dong;
+      params.dealType = dealType;
       const res = await axios.get(`${API_BASE_URL}/api/deals`, { params });
       // 이하 동일 (전체 데이터 기준 정렬/필터)
       const mapped = (res.data as Deal[]).map((item, idx) => ({
@@ -266,6 +278,9 @@ export default function Home() {
         dealDay: String(item.dealDay || ''),
         tradeType: String(item.tradeType || item.dealingGbn || item["거래유형"] || item.dealingGbn || ''),
         cdealType: String(item.cdealType || item["계약해제"] || ''),
+        deposit: item.deposit !== undefined ? item.deposit : item.price, // 서버에서 deposit 내려오면 사용, 없으면 price(매매)
+        monthlyRent: Number(item.monthlyRent !== undefined ? item.monthlyRent : (item.rent !== undefined ? item.rent : 0)),
+        contractType: String(item.contractType || item.tradeType || item["임대구분"] || item["rentGbn"] || ''),
       }));
       setDeals(mapped);
     } catch {
@@ -370,6 +385,21 @@ export default function Home() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                
+                {/* 거래 구분 선택 */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-700">거래 구분</label>
+                  <RadioGroup value={dealType} onValueChange={value => setDealType(value as "trade" | "rent")} className="flex flex-row gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="trade" id="trade" />
+                      <label htmlFor="trade" className="text-sm">매매</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="rent" id="rent" />
+                      <label htmlFor="rent" className="text-sm">전월세</label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 
                 {/* 날짜 선택 */}
@@ -566,73 +596,107 @@ export default function Home() {
                   <div className="text-center text-gray-400">조회 결과가 없습니다.</div>
                 ) : (
                   <>
-                    {/* PC/태블릿 가로모드: 테이블 형태 */}
-                    <div className="hidden lg:block overflow-x-auto">
-                      <div className="max-h-96 overflow-y-auto border rounded-lg">
-                        <table className="min-w-full text-[12px] relative">
-                          <thead className="sticky top-0 z-10">
-                            <tr className="bg-gray-100 border-b">
-                              <th className="border px-2 py-1 bg-gray-100">지역</th>
-                              <th className="border px-2 py-1 bg-gray-100">단지명</th>
-                              <th className="border px-2 py-1 bg-gray-100">층</th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('area')}>
-                                <div className="flex items-center justify-between">
-                                  전용면적
-                                  {getSortIcon('area')}
-                                </div>
-                              </th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('price')}>
-                                <div className="flex items-center justify-between">
-                                  거래금액(만원)
-                                  {getSortIcon('price')}
-                                </div>
-                              </th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('date')}>
-                                <div className="flex items-center justify-between">
-                                  계약일
-                                  {getSortIcon('date')}
-                                </div>
-                              </th>
-                              <th className="border px-2 py-1 bg-gray-100">거래유형</th>
-                              <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('cdealType')}>
-                                <div className="flex items-center justify-between">
-                                  계약해제
-                                  {getSortIcon('cdealType')}
-                                </div>
-                              </th>
-                              <th className="border px-2 py-1 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('buildYear')}>
-                                <div className="flex items-center justify-between">
-                                  건축년도
-                                  {getSortIcon('buildYear')}
-                                </div>
-                              </th>
+                    {/* 거래내역 테이블 영역 */}
+                    {dealType === 'rent' ? (
+                      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                        <table className="min-w-full text-[12px]">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="px-2 py-2 text-left font-semibold">지역</th>
+                              <th className="px-2 py-2 text-left font-semibold">단지명</th>
+                              <th className="px-2 py-2 text-left font-semibold">층</th>
+                              <th className="px-2 py-2 text-left font-semibold">보증금</th>
+                              <th className="px-2 py-2 text-left font-semibold">월세금액</th>
+                              <th className="px-2 py-2 text-left font-semibold">계약일</th>
+                              <th className="px-2 py-2 text-left font-semibold">계약유형</th>
+                              <th className="px-2 py-2 text-left font-semibold">건축년도</th>
                             </tr>
                           </thead>
                           <tbody>
                             {pagedDeals.map((deal) => (
-                              <tr key={deal.id} className="even:bg-gray-50 hover:bg-gray-100 transition-colors">
-                                <td className="border px-2 py-1">{deal.region}</td>
-                                <td className="border px-2 py-1">
-                                  <span
-                                    onClick={() => { setSelectedAptName(deal.aptName); setSelectedArea(null); }}
-                                    className="cursor-pointer text-blue-700 underline hover:text-blue-900"
-                                  >
-                                    {deal.aptName}
-                                  </span>
-                                </td>
-                                <td className="border px-2 py-1">{deal.floor}</td>
-                                <td className="border px-2 py-1">{deal.area}</td>
-                                <td className="border px-2 py-1 font-medium text-blue-600">{formatKoreanPrice(deal.price)}</td>
-                                <td className="border px-2 py-1">{deal.date}</td>
-                                <td className="border px-2 py-1">{deal.tradeType || deal.dealingGbn || deal["거래유형"] || ''}</td>
-                                <td className="border px-2 py-1">{deal.cdealType || deal["계약해제"] || ''}</td>
-                                <td className="border px-2 py-1">{deal.buildYear}</td>
+                              <tr key={deal.id} className="border-b last:border-b-0">
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.region}</td>
+                                <td className="px-2 py-1 whitespace-nowrap cursor-pointer text-blue-600 hover:underline" onClick={() => setSelectedAptName(deal.aptName)}>{deal.aptName}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.floor}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.deposit ? formatKoreanPrice(Number(deal.deposit)) : '-'}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.monthlyRent ? deal.monthlyRent.toLocaleString() + '만원' : '-'}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.date}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.contractType}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.buildYear}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                    </div>
+                    ) : (
+                      // ... 기존 매매 테이블 ...
+                      <div className="hidden lg:block overflow-x-auto">
+                        <div className="max-h-96 overflow-y-auto border rounded-lg">
+                          <table className="min-w-full text-[12px] relative">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-gray-100 border-b">
+                                <th className="border px-2 py-1 bg-gray-100">지역</th>
+                                <th className="border px-2 py-1 bg-gray-100">단지명</th>
+                                <th className="border px-2 py-1 bg-gray-100">층</th>
+                                <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('area')}>
+                                  <div className="flex items-center justify-between">
+                                    전용면적
+                                    {getSortIcon('area')}
+                                  </div>
+                                </th>
+                                <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('price')}>
+                                  <div className="flex items-center justify-between">
+                                    거래금액(만원)
+                                    {getSortIcon('price')}
+                                  </div>
+                                </th>
+                                <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('date')}>
+                                  <div className="flex items-center justify-between">
+                                    계약일
+                                    {getSortIcon('date')}
+                                  </div>
+                                </th>
+                                <th className="border px-2 py-1 bg-gray-100">거래유형</th>
+                                <th className="border px-2 py-1 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('cdealType')}>
+                                  <div className="flex items-center justify-between">
+                                    계약해제
+                                    {getSortIcon('cdealType')}
+                                  </div>
+                                </th>
+                                <th className="border px-2 py-1 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => toggleSort('buildYear')}>
+                                  <div className="flex items-center justify-between">
+                                    건축년도
+                                    {getSortIcon('buildYear')}
+                                  </div>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pagedDeals.map((deal) => (
+                                <tr key={deal.id} className="even:bg-gray-50 hover:bg-gray-100 transition-colors">
+                                  <td className="border px-2 py-1">{deal.region}</td>
+                                  <td className="border px-2 py-1">
+                                    <span
+                                      onClick={() => { setSelectedAptName(deal.aptName); setSelectedArea(null); }}
+                                      className="cursor-pointer text-blue-700 underline hover:text-blue-900"
+                                    >
+                                      {deal.aptName}
+                                    </span>
+                                  </td>
+                                  <td className="border px-2 py-1">{deal.floor}</td>
+                                  <td className="border px-2 py-1">{deal.area}</td>
+                                  <td className="border px-2 py-1 font-medium text-blue-600">{formatKoreanPrice(deal.price)}</td>
+                                  <td className="border px-2 py-1">{deal.date}</td>
+                                  <td className="border px-2 py-1">{deal.tradeType || deal.dealingGbn || deal["거래유형"] || ''}</td>
+                                  <td className="border px-2 py-1">{deal.cdealType || deal["계약해제"] || ''}</td>
+                                  <td className="border px-2 py-1">{deal.buildYear}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
 
                     {/* 모바일 세로모드: 카드 형태 */}
                     <div className="lg:hidden space-y-3">
@@ -716,8 +780,8 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* 단지명+전용면적 선택 시 가격 추이 라인차트 (거래내역 아래) */}
-                    {selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
+                    {/* 단지명+전용면적 선택 시 가격 추이 라인차트 (거래내역 아래) - 이 부분을 dealType === 'trade' 조건으로 감싼다 */}
+                    {dealType === 'trade' && selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mt-6">
                         <h3 className="font-semibold text-gray-800 mb-2">가격 추이 (전용면적 {selectedArea}㎡)</h3>
                         <ResponsiveContainer width="100%" height={300}>
@@ -736,6 +800,43 @@ export default function Home() {
                             <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
                             <Tooltip formatter={v => v.toLocaleString() + '만원'} labelFormatter={l => `계약일: ${l}`} />
                             <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    {/* 매매(거래금액) 차트는 반드시 dealType === 'trade' 조건에서만 렌더링 */}
+                    {dealType === 'trade' && selectedAptName && selectedArea !== null && (
+                      <div className="my-4">
+                        <h3 className="font-semibold mb-2">월별 거래금액 추이</h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                          <LineChart data={filteredDeals.filter(d => d.aptName === selectedAptName && d.area === selectedArea).map(d => ({
+                            month: d.date.slice(0,7),
+                            price: d.price,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => formatKoreanPrice(Number(value))} />
+                            <Line type="monotone" dataKey="price" stroke="#8884d8" name="거래금액" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                    {/* 전월세(전세 보증금) 차트 */}
+                    {dealType === 'rent' && selectedAptName && selectedArea !== null && (
+                      <div className="my-4">
+                        <h3 className="font-semibold mb-2">전세 보증금 추이</h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                          <LineChart data={filteredDeals.filter(d => d.aptName === selectedAptName && d.area === selectedArea && Number(d.monthlyRent) === 0).map(d => ({
+                            month: d.date.slice(0,7),
+                            deposit: d.deposit,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => formatKoreanPrice(Number(value))} />
+                            <Line type="monotone" dataKey="deposit" stroke="#8884d8" name="보증금" />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
