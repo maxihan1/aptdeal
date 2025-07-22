@@ -136,6 +136,13 @@ export default function Home() {
     setCurrentPage(1);
   }, [deals]);
 
+  // 전용면적 선택 시 1페이지로 이동
+  useEffect(() => {
+    if (selectedArea !== null) {
+      setCurrentPage(1);
+    }
+  }, [selectedArea]);
+
   // API 기본 URL 설정
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
