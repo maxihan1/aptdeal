@@ -546,31 +546,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* 단지명+전용면적 선택 시 가격 추이 라인차트 */}
-              {selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-4">
-                  <h3 className="font-semibold text-gray-800 mb-2">가격 추이 (전용면적 {selectedArea}㎡)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart
-                      data={filteredDeals
-                        .map(deal => ({
-                          date: deal.date,
-                          price: deal.price
-                        }))
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                      }
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
-                      <Tooltip formatter={v => v.toLocaleString() + '만원'} labelFormatter={l => `계약일: ${l}`} />
-                      <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
               <div className="p-4">
                 {loading ? (
                   <div className="text-center text-gray-500">조회 중...</div>
@@ -725,6 +700,31 @@ export default function Home() {
                         >
                           다음
                         </Button>
+                      </div>
+                    )}
+
+                    {/* 단지명+전용면적 선택 시 가격 추이 라인차트 (거래내역 아래) */}
+                    {selectedAptName && selectedArea !== null && filteredDeals.length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mt-6">
+                        <h3 className="font-semibold text-gray-800 mb-2">가격 추이 (전용면적 {selectedArea}㎡)</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart
+                            data={filteredDeals
+                              .map(deal => ({
+                                date: deal.date,
+                                price: deal.price
+                              }))
+                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            }
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
+                            <Tooltip formatter={v => v.toLocaleString() + '만원'} labelFormatter={l => `계약일: ${l}`} />
+                            <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
                     )}
                   </>
