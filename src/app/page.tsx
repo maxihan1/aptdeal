@@ -226,46 +226,31 @@ export default function Home() {
     if (!sido || !sigungu || !startDate || !endDate) return;
     setLoading(true);
     try {
-      // '전체' 선택 시 dong 파라미터 없이 조회
-      const params: { sido: string; sigungu: string; startDate: string; endDate: string; dong?: string } = { 
-        sido, 
-        sigungu, 
-        startDate, 
-        endDate 
+      const params: { sido: string; sigungu: string; startDate: string; endDate: string; dong?: string } = {
+        sido,
+        sigungu,
+        startDate,
+        endDate,
       };
       if (dong && dong !== "ALL") params.dong = dong;
-      const res = await axios.get<Deal[]>(`${API_BASE_URL}/api/deals`, { params });
-      // 서버 응답을 Deal 타입에 맞게 매핑
-      const mapped = res.data.map((item, idx) => ({
-        id: item.id || `${sigungu}-${idx}`,
+      const res = await axios.get(`${API_BASE_URL}/api/deals`, { params });
+      // 이하 동일 (전체 데이터 기준 정렬/필터)
+      const mapped = (res.data as Deal[]).map((item, idx) => ({
+        id: item.id || `${sigungu}-1-${idx}`,
         region: item.region || '',
         address: item.address || '',
         area: item.area || 0,
         price: item.price || 0,
         date: item.date || '',
-        aptName: item.aptName || '',
-        floor: item.floor || '',
-        buildYear: item.buildYear || '',
-        dealMonth: item.dealMonth || '',
-        dealDay: item.dealDay || '',
-        tradeType: item.tradeType || item.dealingGbn || (item as unknown as Record<string, string>)["거래유형"], // 거래유형
-        cdealType: item.cdealType || (item as unknown as Record<string, string>)["계약해제"], // 계약해제
+        aptName: String(item.aptNm || item.aptName || ''),
+        floor: String(item.floor || ''),
+        buildYear: String(item.buildYear || ''),
+        dealMonth: String(item.dealMonth || ''),
+        dealDay: String(item.dealDay || ''),
+        tradeType: String(item.tradeType || item.dealingGbn || item["거래유형"] || item.dealingGbn || ''),
+        cdealType: String(item.cdealType || item["계약해제"] || ''),
       }));
-      // '전체'가 아닌 경우에만 동 필터링
-      let filtered = dong && dong !== "ALL"
-        ? mapped.filter(deal => deal.region.includes(dong) || String(deal.address).includes(dong))
-        : mapped;
-      // 일자 필터링(프론트에서)
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        filtered = filtered.filter(deal => {
-          if (!deal.date) return false;
-          const d = new Date(deal.date);
-          return d >= start && d <= end;
-        });
-      }
-      setDeals(filtered);
+      setDeals(mapped);
     } catch {
       setDeals([]);
     } finally {
