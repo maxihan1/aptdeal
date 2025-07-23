@@ -65,7 +65,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<RegionOption[]>([]);
 
   // 정렬 상태
-  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType'>('date');
+  const [sortField, setSortField] = useState<'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType' | 'deposit'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // 선택 예약 상태
@@ -87,7 +87,7 @@ export default function Home() {
       if (sortField === 'date') {
         aValue = new Date(a.date).getTime();
         bValue = new Date(b.date).getTime();
-      } else if (sortField === 'price' || sortField === 'area' || sortField === 'buildYear') {
+      } else if (sortField === 'price' || sortField === 'area' || sortField === 'buildYear' || sortField === 'deposit') {
         aValue = Number(a[sortField]);
         bValue = Number(b[sortField]);
       } else if (sortField === 'cdealType') {
@@ -107,7 +107,7 @@ export default function Home() {
   };
 
   // 정렬 토글 함수
-  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType') => {
+  const toggleSort = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType' | 'deposit') => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -117,7 +117,7 @@ export default function Home() {
   };
 
   // 정렬 아이콘 렌더링
-  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType') => {
+  const getSortIcon = (field: 'price' | 'area' | 'date' | 'aptName' | 'buildYear' | 'cdealType' | 'deposit') => {
     if (sortField !== field) {
       return <ArrowUpDown className="h-4 w-4" />;
     }
@@ -605,11 +605,32 @@ export default function Home() {
                               <th className="px-2 py-2 text-left font-semibold">지역</th>
                               <th className="px-2 py-2 text-left font-semibold">단지명</th>
                               <th className="px-2 py-2 text-left font-semibold">층</th>
-                              <th className="px-2 py-2 text-left font-semibold">보증금</th>
+                              <th className="px-2 py-2 text-left font-semibold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('area')}>
+                                <div className="flex items-center gap-1">
+                                  전용면적
+                                  {getSortIcon('area')}
+                                </div>
+                              </th>
+                              <th className="px-2 py-2 text-left font-semibold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('deposit')}>
+                                <div className="flex items-center gap-1">
+                                  보증금
+                                  {getSortIcon('deposit')}
+                                </div>
+                              </th>
                               <th className="px-2 py-2 text-left font-semibold">월세금액</th>
-                              <th className="px-2 py-2 text-left font-semibold">계약일</th>
+                              <th className="px-2 py-2 text-left font-semibold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('date')}>
+                                <div className="flex items-center gap-1">
+                                  계약일
+                                  {getSortIcon('date')}
+                                </div>
+                              </th>
                               <th className="px-2 py-2 text-left font-semibold">계약유형</th>
-                              <th className="px-2 py-2 text-left font-semibold">건축년도</th>
+                              <th className="px-2 py-2 text-left font-semibold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('buildYear')}>
+                                <div className="flex items-center gap-1">
+                                  건축년도
+                                  {getSortIcon('buildYear')}
+                                </div>
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -618,6 +639,7 @@ export default function Home() {
                                 <td className="px-2 py-1 whitespace-nowrap">{deal.region}</td>
                                 <td className="px-2 py-1 whitespace-nowrap cursor-pointer text-blue-600 hover:underline" onClick={() => setSelectedAptName(deal.aptName)}>{deal.aptName}</td>
                                 <td className="px-2 py-1 whitespace-nowrap">{deal.floor}</td>
+                                <td className="px-2 py-1 whitespace-nowrap">{deal.area}</td>
                                 <td className="px-2 py-1 whitespace-nowrap">{deal.deposit ? formatKoreanPrice(Number(deal.deposit)) : '-'}</td>
                                 <td className="px-2 py-1 whitespace-nowrap">{deal.monthlyRent ? deal.monthlyRent.toLocaleString() + '만원' : '-'}</td>
                                 <td className="px-2 py-1 whitespace-nowrap">{deal.date}</td>
