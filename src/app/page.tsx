@@ -566,12 +566,42 @@ export default function Home() {
                 </div>
               </div>
               
+              {/* 거래내역 테이블 위: 단지명 드롭다운 */}
+              {deals.length > 0 && (
+                <div className="mb-4 max-w-xs">
+                  <Select
+                    value={selectedAptName ?? "ALL"}
+                    onValueChange={value => {
+                      if (value === "ALL") {
+                        setSelectedAptName(null);
+                        setSelectedArea(null);
+                      } else {
+                        setSelectedAptName(value);
+                        setSelectedArea(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="단지명 선택 (전체)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">전체 보기</SelectItem>
+                      {Array.from(new Set(deals.map(deal => deal.aptName)))
+                        .sort((a, b) => a.localeCompare(b, 'ko'))
+                        .map(name => (
+                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* 거래내역 테이블 영역 */}
               {selectedAptName && (
                 <div className="p-3">
                   <Button onClick={() => { setSelectedAptName(null); setSelectedArea(null); }} variant="outline" className="mb-2">
                     전체 보기
                   </Button>
-                  <span className="ml-2 text-blue-700 font-semibold">{selectedAptName} 단지명만 표시 중</span>
+                  <span className="ml-2 text-blue-700 font-semibold">{selectedAptName} 단지의 거래내역 입니다.</span>
                   {/* 전용면적 버튼 */}
                   <div className="flex flex-wrap gap-2 mt-2">
                     {Array.from(new Set(sortDeals(deals).filter(deal => deal.aptName === selectedAptName).map(deal => deal.area))).map(area => (
