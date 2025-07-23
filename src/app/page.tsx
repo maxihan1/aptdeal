@@ -155,7 +155,7 @@ export default function Home() {
   }, [dealType]);
 
   // API 기본 URL 설정
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   // 시도 불러오기
   useEffect(() => {
