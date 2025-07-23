@@ -586,7 +586,7 @@ export default function Home() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">전체 보기</SelectItem>
-                      {Array.from(new Set(deals.map(deal => deal.aptName)))
+                      {Array.from(new Set(filteredDeals.map(deal => deal.aptName)))
                         .sort((a, b) => a.localeCompare(b, 'ko'))
                         .map(name => (
                           <SelectItem key={name} value={name}>{name}</SelectItem>
