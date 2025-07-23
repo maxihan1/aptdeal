@@ -251,6 +251,11 @@ export default function Home() {
 
   // 거래 데이터 조회
   const fetchDeals = async () => {
+    // 단지명/면적 필터 초기화
+    if (selectedAptName !== null || selectedArea !== null) {
+      setSelectedAptName(null);
+      setSelectedArea(null);
+    }
     if (!sido || !sigungu || !startDate || !endDate) return;
     setLoading(true);
     try {
