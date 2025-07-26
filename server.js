@@ -1,15 +1,11 @@
-// ES 모듈 방식으로 전체 변환
-import express from 'express';
-import next from 'next';
-import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import axios from 'axios';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// CommonJS 방식으로 변환
+const express = require('express');
+const next = require('next');
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+const axios = require('axios');
 dotenv.config();
 
 const dev = process.env.NODE_ENV !== 'production';
