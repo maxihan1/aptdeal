@@ -17,8 +17,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 // Supabase 클라이언트 설정
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // 공공데이터 API 키
@@ -41,6 +41,11 @@ function getLawdCd(sido, sigungu) {
 app.prepare().then(() => {
   const server = express();
   server.use(express.json());
+
+  // 헬스 체크 엔드포인트 (AppPass용) - Next.js 라우팅보다 먼저 처리
+  server.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
 
   // 지역 API 라우트
   server.get("/api/regions/provinces", (req, res) => {
@@ -253,18 +258,25 @@ app.prepare().then(() => {
   server.get('/', (req, res) => {
     return handle(req, res);
   });
-  // Next.js 라우트 처리 (API 경로 제외)
+  // Next.js 라우트 처리 (API 경로 및 헬스 체크 제외)
   server.all('/*any', (req, res) => {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    if (req.path === '/health') {
+      return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
     }
     return handle(req, res);
   });
 
   const port = process.env.PORT || 3000;
   server.listen(port, (err) => {
-    if (err) throw err;
+    if (err) {
+      console.error('Server start error:', err);
+      process.exit(1);
+    }
     console.log(`> Ready on http://localhost:${port}`);
     console.log(`> API available at http://localhost:${port}/api`);
+    console.log(`> Health check available at http://localhost:${port}/health`);
   });
 }); 
