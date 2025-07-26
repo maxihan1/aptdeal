@@ -4,14 +4,21 @@ FROM node:18-alpine
 # 작업 디렉토리 설정
 WORKDIR /app
 
+# 시스템 의존성 설치
+RUN apk add --no-cache libc6-compat
+
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
 # 의존성 설치 (개발 의존성 포함)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # 소스 코드 복사
 COPY . .
+
+# 환경 변수 설정
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Next.js 빌드 (강제 실행)
 RUN npm run build || exit 1
