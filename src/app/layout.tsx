@@ -3,7 +3,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "../components/Sidebar";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const geistSans = Geist({
@@ -55,9 +55,7 @@ export default function RootLayout({
 
   // 현재 경로 확인 (라우팅 변경 감지)
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isRegionPage = pathname.startsWith("/region");
-  const sidebarOnly = searchParams.get("sidebarOnly") === "1";
 
   return (
     <html lang="en">
@@ -66,14 +64,8 @@ export default function RootLayout({
       >
         <Header />
         <div className="flex flex-col sm:flex-row w-full max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6">
-          {sidebarOnly ? (
-            <Sidebar />
-          ) : (
-            <>
-              {(!isMobile || !isRegionPage) && <Sidebar />}
-              <main className="flex-1 py-2 sm:py-4">{children ?? null}</main>
-            </>
-          )}
+          {(!isMobile || !isRegionPage) && <Sidebar />}
+          <main className="flex-1 py-2 sm:py-4">{children ?? null}</main>
         </div>
       </body>
     </html>

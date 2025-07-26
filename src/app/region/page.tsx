@@ -573,10 +573,10 @@ function RegionPage() {
   );
 }
 
-export default function RegionPageWithSuspense(props: any) {
-  return (
-    <Suspense>
-      <RegionPage {...props} />
-    </Suspense>
-  );
+export default function RegionPageWithSuspense() {
+      return (
+      <Suspense>
+        <RegionPage />
+      </Suspense>
+    );
 }

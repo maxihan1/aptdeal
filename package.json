@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
+    "postinstall": "npm run build",
     "api": "node api-server.js",
     "lint": "next lint"
   },
@@ -70,6 +71,7 @@
   "apppass": {
     "healthCheck": "/health",
     "port": 3000,
-    "startCommand": "npm start"
+    "startCommand": "npm start",
+    "buildCommand": "npm run build"
   }
 }
