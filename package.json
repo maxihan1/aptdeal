@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
+    "prestart": "npm run build",
     "postinstall": "npm run build",
     "api": "node api-server.js",
     "lint": "next lint"
@@ -72,6 +73,7 @@
     "healthCheck": "/health",
     "port": 3000,
     "startCommand": "npm start",
-    "buildCommand": "npm run build"
+    "buildCommand": "npm run build",
+    "installCommand": "npm ci && npm run build"
   }
 }

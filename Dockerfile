@@ -7,14 +7,17 @@ WORKDIR /app
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
-# 의존성 설치
-RUN npm ci --only=production
+# 의존성 설치 (개발 의존성 포함)
+RUN npm ci
 
 # 소스 코드 복사
 COPY . .
 
-# Next.js 빌드
-RUN npm run build
+# Next.js 빌드 (강제 실행)
+RUN npm run build || exit 1
+
+# 프로덕션 의존성만 유지
+RUN npm prune --production
 
 # 포트 노출
 EXPOSE 3000

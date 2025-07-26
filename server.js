@@ -34,6 +34,14 @@ function getLawdCd(sido, sigungu) {
   return found && found.code ? found.code : null;
 }
 
+// 빌드 파일 존재 확인
+const nextBuildPath = path.join(__dirname, '.next');
+if (!fs.existsSync(nextBuildPath)) {
+  console.error('❌ .next 디렉토리가 없습니다. 빌드를 먼저 실행하세요.');
+  console.error('   npm run build');
+  process.exit(1);
+}
+
 app.prepare().then(() => {
   const server = express();
   server.use(express.json());
