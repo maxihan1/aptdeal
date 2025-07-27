@@ -83,16 +83,21 @@ export default function Sidebar() {
 
   // 읍면동 불러오기
   useEffect(() => {
-    if (!sigungu) {
+    if (!sido || !sigungu) {
       setDongOptions([]);
       // setDong("");
       return;
     }
-    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { params: { city: sigungu } }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { 
+      params: { 
+        city: sigungu,
+        province: sido 
+      } 
+    }).then(res => {
       setDongOptions(res.data);
       // setDong("");
     });
-  }, [sigungu, API_BASE_URL, setDongOptions]);
+  }, [sido, sigungu, API_BASE_URL, setDongOptions]);
 
   // 즐겨찾기 불러오기
   useEffect(() => {

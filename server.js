@@ -98,9 +98,25 @@ app.prepare().then(() => {
     res.json(regions.sigungu[province] || []);
   });
   server.get("/api/regions/neighborhoods", (req, res) => {
-    let { city } = req.query;
+    let { city, province } = req.query;
     city = decodeURIComponent((city || "").trim());
-    res.json(regions.dong ? (regions.dong[city] || []) : []);
+    province = decodeURIComponent((province || "").trim());
+    
+    // 시도-시군구 조합으로 정확히 필터링
+    if (!province || !city) {
+      return res.json([]);
+    }
+    
+    // 해당 시도의 시군구 목록에서 정확한 시군구 찾기
+    const sigunguList = regions.sigungu[province] || [];
+    const targetSigungu = sigunguList.find(s => s.code === city || s.name === city);
+    
+    if (!targetSigungu) {
+      return res.json([]);
+    }
+    
+    // 해당 시군구의 동 목록 반환
+    res.json(regions.dong ? (regions.dong[targetSigungu.name] || []) : []);
   });
 
   // YYYYMM 리스트 생성 함수
