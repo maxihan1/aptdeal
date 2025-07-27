@@ -1,11 +1,15 @@
-// CommonJS 방식으로 변환
-const express = require('express');
-const next = require('next');
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const axios = require('axios');
+// ES 모듈 방식으로 전체 변환
+import express from 'express';
+import next from 'next';
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import axios from 'axios';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -13,8 +17,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 // Supabase 클라이언트 설정
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // 공공데이터 API 키
@@ -34,22 +38,9 @@ function getLawdCd(sido, sigungu) {
   return found && found.code ? found.code : null;
 }
 
-// 빌드 파일 존재 확인
-const nextBuildPath = path.join(__dirname, '.next');
-if (!fs.existsSync(nextBuildPath)) {
-  console.error('❌ .next 디렉토리가 없습니다. 빌드를 먼저 실행하세요.');
-  console.error('   npm run build');
-  process.exit(1);
-}
-
 app.prepare().then(() => {
   const server = express();
   server.use(express.json());
-
-  // 헬스 체크 엔드포인트 (AppPass용) - Next.js 라우팅보다 먼저 처리
-  server.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
 
   // 지역 API 라우트
   server.get("/api/regions/provinces", (req, res) => {
@@ -262,25 +253,18 @@ app.prepare().then(() => {
   server.get('/', (req, res) => {
     return handle(req, res);
   });
-  // Next.js 라우트 처리 (API 경로 및 헬스 체크 제외)
+  // Next.js 라우트 처리 (API 경로 제외)
   server.all('/*any', (req, res) => {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
-    }
-    if (req.path === '/health') {
-      return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
     }
     return handle(req, res);
   });
 
   const port = process.env.PORT || 3000;
   server.listen(port, (err) => {
-    if (err) {
-      console.error('Server start error:', err);
-      process.exit(1);
-    }
+    if (err) throw err;
     console.log(`> Ready on http://localhost:${port}`);
     console.log(`> API available at http://localhost:${port}/api`);
-    console.log(`> Health check available at http://localhost:${port}/health`);
   });
 }); 

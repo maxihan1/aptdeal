@@ -574,9 +574,9 @@ function RegionPage() {
 }
 
 export default function RegionPageWithSuspense() {
-      return (
-      <Suspense>
+  return (
+          <Suspense>
         <RegionPage />
       </Suspense>
-    );
+  );
 }

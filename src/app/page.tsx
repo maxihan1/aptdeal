@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 
 // 타입 정의
 interface Deal {
@@ -32,15 +32,16 @@ export default function Home() {
   const dealsSectionRef = useRef<HTMLDivElement>(null);
 
   // 필터링: 단지명+전용면적, 동, 전체
-  // filteredDeals 타입 명시
-  const filteredDeals: Deal[] = []; // 더미 데이터
+  // filteredDeals 타입 명시 및 useMemo로 최적화
+  const filteredDeals: Deal[] = useMemo(() => {
+    return []; // 더미 데이터
+  }, []); // 빈 배열로 고정
   const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
-  // filteredDeals를 useMemo로 감싸고, useEffect deps에서 제외
 
   // deals가 바뀌면 1페이지로 초기화
   useEffect(() => {
     setCurrentPage(1);
-  }, [filteredDeals]); // filteredDeals가 변경될 때만 페이지 초기화
+  }, []); // filteredDeals가 useMemo로 최적화되어 의존성에서 제거
 
   // 거래금액 한글 억/천 단위 포맷 함수
   // 페이지 변경 함수 (모바일에서 스크롤 포함)

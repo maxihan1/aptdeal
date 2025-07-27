@@ -2,13 +2,10 @@
   "name": "aptdeal-web",
   "version": "1.0.0",
   "private": true,
-
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
-    "prestart": "npm run build",
-    "postinstall": "npm run build",
     "api": "node api-server.js",
     "lint": "next lint"
   },
@@ -43,13 +40,13 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.1",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.1.11",
     "ts-node": "^10.9.2",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5.8.3"
@@ -68,12 +65,5 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
-  },
-  "apppass": {
-    "healthCheck": "/health",
-    "port": 3000,
-    "startCommand": "npm start",
-    "buildCommand": "npm run build",
-    "installCommand": "npm ci && npm run build"
   }
 }

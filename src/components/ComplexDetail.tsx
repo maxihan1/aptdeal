@@ -181,7 +181,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(this: Scale, value: string | number, index: number, ticks: Tick[]): string | number | null {
+          callback: function(this: Scale, value: string | number): string | number | null {
             const isMobile = window.innerWidth <= 768;
             const numValue = typeof value === 'number' ? value : parseFloat(value);
             if (isMobile) {
@@ -216,7 +216,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
         },
       },
     },
-  }), []);
+  }), [allDates]);
 
   // 면적별 평균 가격
   function getAreaAvgPrice(areaData: AreaDealData): number {
@@ -231,11 +231,11 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   }));
 
   // 전체 데이터 날짜 기준으로 x축 고정 (useMemo로 선언)
-  // x축 라벨은 데이터 개수에 따라 유동적으로
-  const xLabels = React.useMemo(() => allDates.map(d => {
-    const [y, m, dd] = d.split('-');
-    return `${y}년 ${Number(m)}월 ${Number(dd)}일`;
-  }), [allDates]);
+  // x축 라벨은 데이터 개수에 따라 유동적으로 - 현재 사용하지 않음
+  // const xLabels = React.useMemo(() => allDates.map(d => {
+  //   const [y, m, dd] = d.split('-');
+  //   return `${y}년 ${Number(m)}월 ${Number(dd)}일`;
+  // }), [allDates]);
 
   // region, address를 합쳐 전체 주소 생성 (지번이 있으면 포함)
   const fullAddress = `${info.region} ${info.address}`.trim();

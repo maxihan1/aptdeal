@@ -145,7 +145,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         const res = await fetch(`/api/apt-households?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&aptName=${encodeURIComponent(decodedAptName)}`);
         const data = await res.json();
         totalHouseholds = data.kaptdaCnt || 0;
-      } catch (e) {
+      } catch {
         totalHouseholds = 0;
       }
       setInfo({

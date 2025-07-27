@@ -102,15 +102,22 @@ export default function Sidebar() {
 
   // 즐겨찾기 추가
   const addFavorite = () => {
-    if (!sido || !sigungu || !dong) return;
+    if (!sido || !sigungu) return;
+    const regionParts = [
+      sidoOptions.find(s => s.code === sido)?.name || sido,
+      sigunguOptions.find(s => s.code === sigungu)?.name || sigungu
+    ];
+    
+    // 동이 선택된 경우에만 추가
+    if (dong && dong !== "ALL") {
+      regionParts.push(dongOptions.find(d => d.code === dong)?.name || dong);
+    }
+    
     const region: RegionOption = {
-      code: `${sido}-${sigungu}-${dong}`,
-      name: [
-        sidoOptions.find(s => s.code === sido)?.name || sido,
-        sigunguOptions.find(s => s.code === sigungu)?.name || sigungu,
-        dongOptions.find(d => d.code === dong)?.name || dong
-      ].join(" ")
+      code: dong && dong !== "ALL" ? `${sido}-${sigungu}-${dong}` : `${sido}-${sigungu}`,
+      name: regionParts.join(" ")
     };
+    
     if (favorites.find(f => f.code === region.code)) return;
     const next = [...favorites, region];
     setFavorites(next);
@@ -151,7 +158,11 @@ export default function Sidebar() {
   // 즐겨찾기에서 선택 버튼 클릭 시 예약
   const handleFavoriteSelect = (favCode: string) => {
     const [sidoCode, sigunguCode, dongCode] = favCode.split("-");
-    setPendingSelect({ sido: sidoCode, sigungu: sigunguCode, dong: dongCode });
+    setPendingSelect({ 
+      sido: sidoCode, 
+      sigungu: sigunguCode, 
+      dong: dongCode || "" // dongCode가 undefined인 경우 빈 문자열로 처리
+    });
   };
 
   // 시도 옵션 준비 시 자동 선택
@@ -159,25 +170,35 @@ export default function Sidebar() {
     if (pendingSelect && sidoOptions.length > 0) {
       if (sido !== pendingSelect.sido) setSido(pendingSelect.sido);
     }
-  }, [pendingSelect, sidoOptions]);
+  }, [pendingSelect, sidoOptions, sido]);
 
   // 시군구 옵션 준비 시 자동 선택
   useEffect(() => {
     if (pendingSelect && sigunguOptions.length > 0 && sido === pendingSelect.sido) {
       if (sigungu !== pendingSelect.sigungu) setSigungu(pendingSelect.sigungu);
     }
-  }, [pendingSelect, sigunguOptions, sido]);
+  }, [pendingSelect, sigunguOptions, sido, sigungu]);
 
   // 읍면동 옵션 준비 시 자동 선택
   useEffect(() => {
-    if (pendingSelect && dongOptions.length > 0 && sigungu === pendingSelect.sigungu) {
-      if (dong !== pendingSelect.dong) setDong(pendingSelect.dong);
-      // 모두 선택 완료 후 예약 해제
-      if (dongOptions.find(d => d.code === pendingSelect.dong)) {
+    if (pendingSelect && sigungu === pendingSelect.sigungu) {
+      // 동이 지정되지 않은 즐겨찾기인 경우 (시도-시군만 있는 경우)
+      if (!pendingSelect.dong || pendingSelect.dong === "") {
+        // 동 선택 없이 완료 처리
         setPendingSelect(null);
+        return;
+      }
+      
+      // 동이 지정된 경우 기존 로직 수행
+      if (dongOptions.length > 0) {
+        if (dong !== pendingSelect.dong) setDong(pendingSelect.dong);
+        // 모두 선택 완료 후 예약 해제
+        if (dongOptions.find(d => d.code === pendingSelect.dong)) {
+          setPendingSelect(null);
+        }
       }
     }
-  }, [pendingSelect, dongOptions, sigungu]);
+  }, [pendingSelect, dongOptions, sigungu, dong]);
 
   useEffect(() => {
     if (
@@ -189,7 +210,7 @@ export default function Sidebar() {
       setStartDate(format(sevenDaysAgo, "yyyy-MM-dd"));
       setEndDate(format(today, "yyyy-MM-dd"));
     }
-  }, [pathname]);
+  }, [pathname, startDate, endDate]);
 
   return (
     <aside className="mt-2 sm:mt-0 sm:static sm:w-72 bg-white border-r border-gray-200 flex flex-col min-h-screen p-4 gap-3">
@@ -317,7 +338,7 @@ export default function Sidebar() {
             <Button onClick={handleSearch} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               🔍 조회
             </Button>
-            <Button variant="outline" onClick={addFavorite} disabled={!sido || !sigungu || !dong} className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50">
+            <Button variant="outline" onClick={addFavorite} disabled={!sido || !sigungu} className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50">
               <Star className="w-4 h-4 mr-1" /> 즐겨찾기
             </Button>
           </div>
