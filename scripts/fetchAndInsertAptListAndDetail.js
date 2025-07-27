@@ -1,10 +1,14 @@
+// 임시 주석 처리 - 나중에 다시 사용 예정
+/*
 // ESM 모듈 스타일로 변경
 import 'dotenv/config';
 import axios from 'axios';
 import { supabase } from '../src/lib/supabase.js';
 
 const SERVICE_KEY = process.env.SERVICE_KEY;
+*/
 
+/*
 async function fetchAllAptList() {
   let pageNo = 1;
   const numOfRows = 1000;
@@ -27,7 +31,9 @@ async function fetchAllAptList() {
   }
   return allApts;
 }
+*/
 
+/*
 async function fetchAptDetail(kaptCode) {
   const url = 'https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4';
   const params = {
@@ -43,7 +49,9 @@ async function fetchAptDetail(kaptCode) {
     return {};
   }
 }
+*/
 
+/*
 async function batchUpsert(rows, batchSize = 100) {
   function toLowerCaseKeys(obj) {
     return Object.fromEntries(
@@ -60,7 +68,9 @@ async function batchUpsert(rows, batchSize = 100) {
     }
   }
 }
+*/
 
+/*
 async function main() {
   const aptList = await fetchAllAptList();
   console.log(`[API] 전체 단지 수: ${aptList.length}`);
@@ -119,4 +129,5 @@ async function main() {
   console.log('완료!');
 }
 
-main(); 
+main();
+*/ 

@@ -1,9 +1,13 @@
+// 임시 주석 처리 - 나중에 다시 사용 예정
+/*
 import 'dotenv/config';
 import axios from 'axios';
 import { supabase } from '../src/lib/supabase.js';
 
 const SERVICE_KEY = process.env.SERVICE_KEY;
+*/
 
+/*
 async function fetchAptDetail(kaptCode) {
   // [수정] 베이스 정보 API로 변경
   const url = 'https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4';
@@ -26,7 +30,9 @@ async function fetchAptDetail(kaptCode) {
     return {};
   }
 }
+*/
 
+/*
 async function batchUpsert(rows, batchSize = 100) {
   function toLowerCaseKeys(obj) {
     return Object.fromEntries(
@@ -69,7 +75,9 @@ async function batchUpsert(rows, batchSize = 100) {
     // console.log('[upsert 후 DB]', JSON.stringify(after, null, 2));
   }
 }
+*/
 
+/*
 async function main() {
   // 1. Supabase DB에서 kaptCode 목록 조회
   const { data: aptList, error } = await supabase.from('apt').select('kaptcode');
@@ -108,4 +116,5 @@ async function main() {
   console.log('상세정보 채우기 완료!');
 }
 
-main(); 
+main();
+*/ 

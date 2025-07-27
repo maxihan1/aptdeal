@@ -3,8 +3,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "../components/Sidebar";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,11 +18,30 @@ const geistMono = Geist_Mono({
 });
 
 function Header() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  
+  const handleHeaderClick = () => {
+    if (isMobile) {
+      // 모바일에서 헤더 클릭 시 사이드바만 보여주기
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("sidebarOnly", "1");
+      router.replace(`/?${params.toString()}`);
+    } else {
+      // 데스크톱에서는 루트 페이지로 이동
+      router.push("/");
+    }
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 w-full">
       <div className="w-full px-4">
         <div className="flex items-center justify-between h-12 sm:h-16">
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div 
+            onClick={handleHeaderClick}
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xs sm:text-sm">A</span>
             </div>
