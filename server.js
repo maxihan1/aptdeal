@@ -10,9 +10,21 @@ import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+console.log('🚀 [STARTUP] Starting server initialization...');
+console.log('📁 [STARTUP] Working directory:', __dirname);
+console.log('🔧 [STARTUP] NODE_ENV:', process.env.NODE_ENV);
+
 dotenv.config();
 
+console.log('🔐 [STARTUP] Environment variables loaded');
+console.log('🗄️  [STARTUP] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('🔑 [STARTUP] Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+console.log('🌐 [STARTUP] API URL:', process.env.NEXT_PUBLIC_API_URL || 'NOT SET');
+
 const dev = process.env.NODE_ENV !== 'production';
+console.log('⚙️  [STARTUP] Development mode:', dev);
+
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
@@ -25,9 +37,29 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const SERVICE_KEY = process.env.SERVICE_KEY || "PofsBo9KhzreP4I5ULYO0sqoysrTnQGpozz8JfdTSltOOYpJALPKFhZncnaL/bD8hsFzbNxSWZlbBhowKedMEw==";
 
 // 지역 데이터 로드
+console.log('📄 [DATA] Loading regions data...');
 const regionsPath = path.join(__dirname, "regions.json");
+console.log('📄 [DATA] Regions file path:', regionsPath);
+
+try {
+  const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
+  console.log('✅ [DATA] Regions data loaded successfully');
+} catch (error) {
+  console.error('❌ [DATA] Failed to load regions.json:', error.message);
+  process.exit(1);
+}
 const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
+
 const regionsLawdPath = path.join(__dirname, "regions_with_lawdcd.json");
+console.log('📄 [DATA] Regions LAWD file path:', regionsLawdPath);
+
+try {
+  const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
+  console.log('✅ [DATA] Regions LAWD data loaded successfully');
+} catch (error) {
+  console.error('❌ [DATA] Failed to load regions_with_lawdcd.json:', error.message);
+  process.exit(1);
+}
 const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
 
 // 시군구명 → lawd_cd 매핑 함수 (lawd_cd 직접 전달도 허용)
@@ -38,9 +70,24 @@ function getLawdCd(sido, sigungu) {
   return found && found.code ? found.code : null;
 }
 
+console.log('🎯 [NEXT] Preparing Next.js app...');
 app.prepare().then(() => {
+  console.log('✅ [NEXT] Next.js app prepared successfully');
+  
   const server = express();
   server.use(express.json());
+  
+  console.log('🌐 [EXPRESS] Express server created');
+  
+  // Health check endpoint for AppPass
+  server.get('/health', (req, res) => {
+    console.log('💓 [HEALTH] Health check requested');
+    res.status(200).json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV 
+    });
+  });
 
   // 지역 API 라우트
   server.get("/api/regions/provinces", (req, res) => {
@@ -262,9 +309,20 @@ app.prepare().then(() => {
   });
 
   const port = process.env.PORT || 3000;
-  server.listen(port, (err) => {
-    if (err) throw err;
-    console.log(`> Ready on http://localhost:${port}`);
-    console.log(`> API available at http://localhost:${port}/api`);
+  console.log('🚀 [SERVER] Starting server on port:', port);
+  
+  server.listen(port, '0.0.0.0', (err) => {
+    if (err) {
+      console.error('❌ [SERVER] Failed to start server:', err);
+      process.exit(1);
+    }
+    console.log('🎉 [SERVER] Server started successfully!');
+    console.log(`📍 [SERVER] Server running on http://0.0.0.0:${port}`);
+    console.log(`🔗 [SERVER] API available at http://0.0.0.0:${port}/api`);
+    console.log(`💓 [SERVER] Health check at http://0.0.0.0:${port}/health`);
+    console.log('✨ [SERVER] Ready to receive requests!');
   });
+}).catch(error => {
+  console.error('❌ [NEXT] Failed to prepare Next.js app:', error);
+  process.exit(1);
 }); 
