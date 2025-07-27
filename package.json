@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "node server.js",
     "api": "node api-server.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
