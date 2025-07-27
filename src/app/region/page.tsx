@@ -67,9 +67,9 @@ function RegionPage() {
     const endDate = searchParams.get('endDate');
     const dealType = searchParams.get('dealType');
 
-    // 동 옵션 불러오기 (시군구가 있을 때만)
-    if (sigungu) {
-      axios.get<{ code: string; name: string }[]>(`/api/regions/neighborhoods`, { params: { city: sigungu } }).then(res => {
+    // 동 옵션 불러오기 (시도와 시군구가 있을 때만)
+    if (sido && sigungu) {
+      axios.get<{ code: string; name: string }[]>(`/api/regions/neighborhoods`, { params: { province: sido, city: sigungu } }).then(res => {
         setDongOptions([{ code: "ALL", name: "전체" }, ...res.data]);
       });
     } else {

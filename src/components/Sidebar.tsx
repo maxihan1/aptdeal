@@ -69,15 +69,15 @@ export default function Sidebar() {
     if (!sido) {
       setSigunguOptions([]);
       setDongOptions([]);
-      // setSigungu("");
-      // setDong("");
+      setSigungu("");
+      setDong("");
       return;
     }
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/cities`, { params: { province: sido } }).then(res => {
       setSigunguOptions(res.data);
-      // setSigungu("");
-      // setDongOptions([]);
-      // setDong("");
+      setSigungu("");
+      setDongOptions([]);
+      setDong("");
     });
   }, [sido, API_BASE_URL, setSigunguOptions, setDongOptions]);
 
@@ -85,12 +85,12 @@ export default function Sidebar() {
   useEffect(() => {
     if (!sigungu || !sido) {
       setDongOptions([]);
-      // setDong("");
+      setDong("");
       return;
     }
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { params: { province: sido, city: sigungu } }).then(res => {
       setDongOptions(res.data);
-      // setDong("");
+      setDong("");
     });
   }, [sido, sigungu, API_BASE_URL, setDongOptions]);
 
@@ -267,6 +267,7 @@ export default function Sidebar() {
                 <SelectValue placeholder="읍면동 선택" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ALL">전체</SelectItem>
                 {dongOptions.map(opt => (
                   <SelectItem key={opt.code} value={opt.code}>{opt.name}</SelectItem>
                 ))}
@@ -366,12 +367,12 @@ export default function Sidebar() {
             <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs">⭐</span>
             </div>
-            즐겨찾기 지역
+            관심지역
           </h2>
         </div>
         <div className="p-4 max-h-64 overflow-y-auto">
           {favorites.length === 0 ? (
-            <div className="text-gray-400 text-sm text-center py-4">등록된 즐겨찾기 지역이 없습니다.</div>
+            <div className="text-gray-400 text-sm text-center py-4">등록된 관심지역이 없습니다.</div>
           ) : (
             <ul className="space-y-2">
               {favorites.map(fav => (

@@ -65,12 +65,30 @@ for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 �
   const parts = line.split('\t');
   if (parts.length >= 3 && parts[2] === '존재') {
     const fullName = parts[1];
-    // "시도 시군구 동" 형식에서 각 부분 추출
-    const match = fullName.match(/^(.+?)\s+(.+?)\s+(.+)$/);
-    if (match) {
-      const [, sido, sigungu, dong] = match;
-      const key = `${sido}-${sigungu}`;
-      
+    
+    // 지역명을 공백으로 분리
+    const nameParts = fullName.split(/\s+/);
+    let sido, sigungu, dong, key, si, gu;
+    
+    if (nameParts.length === 4) {
+      // 4개 부분: "경기도 용인시 기흥구 신갈동" 형태
+      [sido, si, gu, dong] = nameParts;
+      sigungu = `${si} ${gu}`;
+      key = `${sido}-${sigungu}`;
+    } else if (nameParts.length === 3) {
+      // 3개 부분: "경기도 수원시 팔달동" 형태
+      [sido, sigungu, dong] = nameParts;
+      key = `${sido}-${sigungu}`;
+    } else if (nameParts.length === 2) {
+      // 2개 부분: "세종특별자치시 반곡동" 형태
+      [sido, dong] = nameParts;
+      sigungu = "세종시"; // UI에서 선택하는 시군구명
+      key = `${sido}-${sigungu}`;
+    }
+    
+    // 동 이름이 있고, 구/군/시로 끝나지 않는 경우만 추가
+    if (key && dong && dong.trim() && 
+        !dong.endsWith('구') && !dong.endsWith('군') && !dong.endsWith('시')) {
       if (!sidoSigunguDongMapping[key]) {
         sidoSigunguDongMapping[key] = [];
       }
@@ -105,8 +123,23 @@ const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
 function getLawdCd(sido, sigungu) {
   if (/^\d{5}$/.test(sigungu)) return sigungu;
   const sigunguArr = regionsLawd.sigungu[sido] || [];
-  const found = sigunguArr.find((item) => item.name === sigungu);
-  return found && found.code ? found.code : null;
+  
+  // 1. 정확한 매칭 시도
+  let found = sigunguArr.find((item) => item.name === sigungu);
+  if (found && found.code) return found.code;
+  
+  // 2. "시 + 구" 형태인 경우, 시만 매칭 시도 (예: "부천시 원미구" → "부천시")
+  if (sigungu.includes(' ')) {
+    const si = sigungu.split(' ')[0];
+    found = sigunguArr.find((item) => item.name === si);
+    if (found && found.code) {
+      console.log(`[getLawdCd] "${sigungu}" → "${si}" 매핑: ${found.code}`);
+      return found.code;
+    }
+  }
+  
+  console.log(`[getLawdCd] "${sigungu}" 매핑 실패`);
+  return null;
 }
 
 console.log('🎯 [NEXT] Preparing Next.js app...');
