@@ -50,6 +50,45 @@ try {
 }
 const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
 
+// LAWD_CD.txt 파일 파싱하여 시도-시군구별 동 매핑 생성
+console.log('📄 [DATA] Loading LAWD_CD data...');
+const lawdCdPath = path.join(__dirname, "LAWD_CD.txt");
+const lawdCdData = fs.readFileSync(lawdCdPath, "utf-8");
+const sidoSigunguDongMapping = {};
+
+console.log('📄 [DATA] Parsing LAWD_CD data...');
+const lines = lawdCdData.split('\n');
+for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 건너뜀
+  const line = lines[i].trim();
+  if (!line) continue;
+  
+  const parts = line.split('\t');
+  if (parts.length >= 3 && parts[2] === '존재') {
+    const fullName = parts[1];
+    // "시도 시군구 동" 형식에서 각 부분 추출
+    const match = fullName.match(/^(.+?)\s+(.+?)\s+(.+)$/);
+    if (match) {
+      const [, sido, sigungu, dong] = match;
+      const key = `${sido}-${sigungu}`;
+      
+      if (!sidoSigunguDongMapping[key]) {
+        sidoSigunguDongMapping[key] = [];
+      }
+      
+      // 중복 제거
+      if (!sidoSigunguDongMapping[key].find(d => d.name === dong)) {
+        sidoSigunguDongMapping[key].push({
+          code: dong,
+          name: dong
+        });
+      }
+    }
+  }
+}
+
+console.log('✅ [DATA] LAWD_CD data parsed successfully');
+console.log('📊 [DATA] Number of sido-sigungu combinations:', Object.keys(sidoSigunguDongMapping).length);
+
 const regionsLawdPath = path.join(__dirname, "regions_with_lawdcd.json");
 console.log('📄 [DATA] Regions LAWD file path:', regionsLawdPath);
 
@@ -98,25 +137,23 @@ app.prepare().then(() => {
     res.json(regions.sigungu[province] || []);
   });
   server.get("/api/regions/neighborhoods", (req, res) => {
-    let { city, province } = req.query;
+    let { province, city } = req.query;
     city = decodeURIComponent((city || "").trim());
     province = decodeURIComponent((province || "").trim());
     
-    // 시도-시군구 조합으로 정확히 필터링
-    if (!province || !city) {
-      return res.json([]);
+    // 시도와 시군구가 모두 제공된 경우, LAWD_CD 기반 매핑 사용
+    if (province && city) {
+      const key = `${province}-${city}`;
+      const dongList = sidoSigunguDongMapping[key] || [];
+      
+      console.log(`[neighborhoods] Request: ${province} ${city}, Found ${dongList.length} dongs`);
+      res.json(dongList);
+      return;
     }
     
-    // 해당 시도의 시군구 목록에서 정확한 시군구 찾기
-    const sigunguList = regions.sigungu[province] || [];
-    const targetSigungu = sigunguList.find(s => s.code === city || s.name === city);
-    
-    if (!targetSigungu) {
-      return res.json([]);
-    }
-    
-    // 해당 시군구의 동 목록 반환
-    res.json(regions.dong ? (regions.dong[targetSigungu.name] || []) : []);
+    // 시도나 시군구가 제공되지 않은 경우 빈 배열 반환
+    console.log('[neighborhoods] Missing province or city parameter');
+    res.json([]);
   });
 
   // YYYYMM 리스트 생성 함수

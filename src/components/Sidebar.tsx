@@ -83,17 +83,12 @@ export default function Sidebar() {
 
   // 읍면동 불러오기
   useEffect(() => {
-    if (!sido || !sigungu) {
+    if (!sigungu || !sido) {
       setDongOptions([]);
       // setDong("");
       return;
     }
-    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { 
-      params: { 
-        city: sigungu,
-        province: sido 
-      } 
-    }).then(res => {
+    axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { params: { province: sido, city: sigungu } }).then(res => {
       setDongOptions(res.data);
       // setDong("");
     });
@@ -196,10 +191,10 @@ export default function Sidebar() {
       
       // 동이 지정된 경우 기존 로직 수행
       if (dongOptions.length > 0) {
-        if (dong !== pendingSelect.dong) setDong(pendingSelect.dong);
-        // 모두 선택 완료 후 예약 해제
-        if (dongOptions.find(d => d.code === pendingSelect.dong)) {
-          setPendingSelect(null);
+      if (dong !== pendingSelect.dong) setDong(pendingSelect.dong);
+      // 모두 선택 완료 후 예약 해제
+      if (dongOptions.find(d => d.code === pendingSelect.dong)) {
+        setPendingSelect(null);
         }
       }
     }
