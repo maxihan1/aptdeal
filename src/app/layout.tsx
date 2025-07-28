@@ -123,6 +123,9 @@ function RootLayoutContent({
         {/* Google Search Console 소유권 확인 */}
         <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'google147b28c0e8d03660'} />
         
+        {/* 네이버 서치어드바이저 소유권 확인 */}
+        <meta name="naver-site-verification" content="naver1458ee2edb2c4a3a65c28b9d8ed873be" />
+        
         {/* Google Analytics */}
         <Script
           strategy="afterInteractive"
