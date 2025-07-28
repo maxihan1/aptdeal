@@ -91,6 +91,9 @@ function RootLayoutContent({
   return (
     <html lang="en">
       <head>
+        {/* Google Search Console 소유권 확인 */}
+        <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" />
+        
         {/* Google Analytics */}
         <Script
           strategy="afterInteractive"
