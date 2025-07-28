@@ -1,0 +1,105 @@
+"use client";
+
+import Sidebar from "../components/Sidebar";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { pageview } from "@/lib/gtag";
+
+function Header() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  
+  const handleHeaderClick = () => {
+    if (isMobile) {
+      // 모바일에서 헤더 클릭 시 사이드바만 보여주기
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("sidebarOnly", "1");
+      router.replace(`/?${params.toString()}`);
+    } else {
+      // 데스크톱에서는 루트 페이지로 이동
+      router.push("/");
+    }
+  };
+
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200 w-full">
+      <div className="w-full px-4">
+        <div className="flex items-center justify-between h-12 sm:h-16">
+          <div 
+            onClick={handleHeaderClick}
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs sm:text-sm">A</span>
+            </div>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">APTDEAL</h1>
+          </div>
+          <div className="hidden sm:block text-sm text-gray-500">
+            아파트 실거래가 조회 서비스
+          </div>
+          <div className="sm:hidden text-xs text-gray-500">
+            실거래가 조회
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ClientLayoutContent({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  // 클라이언트에서만 동작하는 모바일 감지
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 현재 경로 확인 (라우팅 변경 감지)
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isRegionPage = pathname.startsWith("/region");
+  const sidebarOnly = searchParams.get("sidebarOnly") === "1";
+
+  // Google Analytics 페이지뷰 추적
+  useEffect(() => {
+    const url = pathname + searchParams.toString();
+    pageview(url);
+  }, [pathname, searchParams]);
+
+  return (
+    <>
+      <Header />
+      <div className="flex flex-col sm:flex-row w-full max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6">
+        {sidebarOnly ? (
+          <Sidebar />
+        ) : (
+          <>
+            {(!isMobile || !isRegionPage) && <Sidebar />}
+            <main className="flex-1 py-2 sm:px-4">{children ?? null}</main>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+export default function ClientLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <Suspense>
+      <ClientLayoutContent>
+        {children}
+      </ClientLayoutContent>
+    </Suspense>
+  );
+} 
