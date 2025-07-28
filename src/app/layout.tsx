@@ -5,7 +5,8 @@ import "./globals.css";
 import Sidebar from "../components/Sidebar";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
-import Link from "next/link";
+import Script from "next/script";
+import { GA_TRACKING_ID, pageview } from "@/lib/gtag";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,8 +80,37 @@ function RootLayoutContent({
   const isRegionPage = pathname.startsWith("/region");
   const sidebarOnly = searchParams.get("sidebarOnly") === "1";
 
+  // Google Analytics 페이지뷰 추적
+  useEffect(() => {
+    if (GA_TRACKING_ID) {
+      const url = pathname + searchParams.toString();
+      pageview(url);
+    }
+  }, [pathname, searchParams]);
+
   return (
     <html lang="en">
+      <head>
+        {/* Google Analytics */}
+        <Script
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
+        />
+        <Script
+          id="gtag-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_TRACKING_ID}', {
+                page_location: window.location.href,
+              });
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -91,7 +121,7 @@ function RootLayoutContent({
           ) : (
             <>
               {(!isMobile || !isRegionPage) && <Sidebar />}
-              <main className="flex-1 py-2 sm:py-4">{children ?? null}</main>
+              <main className="flex-1 py-2 sm:px-4">{children ?? null}</main>
             </>
           )}
         </div>

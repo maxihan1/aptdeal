@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { trackAptDetail } from '@/lib/gtag';
 import Link from 'next/link';
 import axios from 'axios'; // axios 추가
 import { useRouter } from "next/navigation";
@@ -56,7 +57,8 @@ function RegionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // 캐시 관련 상태
+  // 캐시 관련 상태 (사용하지 않음 - 향후 기능 확장을 위해 유지)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isFromCache, setIsFromCache] = useState(false);
 
   // sidebarOnly 쿼리 파라미터가 있으면 사이드바만 보이기
@@ -102,7 +104,42 @@ function RegionPage() {
     }
   };
 
+  // 거래 데이터 조회 (API 호출 경로를 /api/deals로 고정)
+  const loadDeals = useCallback(async (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null, useCache: boolean = false) => {
+    const cacheKey = generateCacheKey(sido, sigungu, dong, startDate, endDate, dealType);
+    
+    // 캐시 사용이 허용된 경우에만 캐시 확인
+    if (useCache) {
+      const cachedData = getCachedDeals(cacheKey);
+      if (cachedData) {
+        setDeals(cachedData);
+        setIsFromCache(true);
+        return;
+      }
+    }
 
+    setLoading(true);
+    setIsFromCache(false);
+    
+    try {
+      const params: Record<string, string> = { sido, sigungu, startDate, endDate };
+      if (dong) params.dong = dong;
+      if (dealType === 'rent') {
+        const res = await axios.get('/api/rent', { params });
+        setDeals(res.data);
+        setCachedDeals(cacheKey, res.data);
+      } else {
+        if (dealType) params.dealType = dealType;
+        const res = await axios.get('/api/deals', { params });
+        setDeals(res.data);
+        setCachedDeals(cacheKey, res.data);
+      }
+    } catch {
+      setDeals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // URL 파라미터에서 검색 조건 가져오기
@@ -141,44 +178,7 @@ function RegionPage() {
       const isBackNavigation = !isLoading; // loading 파라미터가 없으면 뒤로가기로 간주
       loadDeals(sido, sigungu, dongParam, startDate, endDate, dealType, isBackNavigation);
     }
-  }, [searchParams]);
-
-  // 거래 데이터 조회 (API 호출 경로를 /api/deals로 고정)
-  const loadDeals = async (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null, useCache: boolean = false) => {
-    const cacheKey = generateCacheKey(sido, sigungu, dong, startDate, endDate, dealType);
-    
-    // 캐시 사용이 허용된 경우에만 캐시 확인
-    if (useCache) {
-      const cachedData = getCachedDeals(cacheKey);
-      if (cachedData) {
-        setDeals(cachedData);
-        setIsFromCache(true);
-        return;
-      }
-    }
-
-    setLoading(true);
-    setIsFromCache(false);
-    
-    try {
-      const params: Record<string, string> = { sido, sigungu, startDate, endDate };
-      if (dong) params.dong = dong;
-      if (dealType === 'rent') {
-        const res = await axios.get('/api/rent', { params });
-        setDeals(res.data);
-        setCachedDeals(cacheKey, res.data);
-      } else {
-        if (dealType) params.dealType = dealType;
-        const res = await axios.get('/api/deals', { params });
-        setDeals(res.data);
-        setCachedDeals(cacheKey, res.data);
-      }
-    } catch {
-      setDeals([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, loadDeals, router]);
 
   // 정렬된/필터된 거래 리스트 useMemo로 관리
   const filteredDeals = useMemo(() => {
@@ -501,7 +501,11 @@ function RegionPage() {
                             <td className="px-3 py-2 border text-center">{deal.buildYear}</td>
                             <td className="px-3 py-2 border text-center">
                               <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${encodeURIComponent(searchParams.get('sido') ?? '')}&sigungu=${encodeURIComponent(searchParams.get('sigungu') ?? '')}&dong=${encodeURIComponent(searchParams.get('dong') ?? '')}&startDate=${encodeURIComponent(searchParams.get('startDate') ?? '')}&endDate=${encodeURIComponent(searchParams.get('endDate') ?? '')}&dealType=rent`}>
-                                <Button size="sm" variant="outline">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => trackAptDetail(deal.aptName)}
+                                >
                                   <TrendingUp className="w-4 h-4 mr-1" />단지상세
                                 </Button>
                               </Link>
@@ -565,7 +569,11 @@ function RegionPage() {
                             <td className="px-3 py-2 border text-center">{'buildYear' in deal ? deal.buildYear : ''}</td>
                             <td className="px-3 py-2 border text-center">
                               <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${encodeURIComponent(searchParams.get('sido') ?? '')}&sigungu=${encodeURIComponent(searchParams.get('sigungu') ?? '')}&dong=${encodeURIComponent(searchParams.get('dong') ?? '')}&startDate=${encodeURIComponent(searchParams.get('startDate') ?? '')}&endDate=${encodeURIComponent(searchParams.get('endDate') ?? '')}&dealType=${encodeURIComponent(searchParams.get('dealType') ?? 'trade')}`}>
-                                <Button size="sm" variant="outline">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => trackAptDetail(deal.aptName)}
+                                >
                                   <TrendingUp className="w-4 h-4 mr-1" />단지상세
                                 </Button>
                               </Link>
@@ -658,7 +666,12 @@ function RegionPage() {
                       </div>
                       <div className="mt-2">
                         <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${encodeURIComponent(searchParams.get('sido') ?? '')}&sigungu=${encodeURIComponent(searchParams.get('sigungu') ?? '')}&dong=${encodeURIComponent(searchParams.get('dong') ?? '')}&startDate=${encodeURIComponent(searchParams.get('startDate') ?? '')}&endDate=${encodeURIComponent(searchParams.get('endDate') ?? '')}&dealType=${encodeURIComponent(searchParams.get('dealType') ?? 'trade')}`}>
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 px-2 text-xs"
+                            onClick={() => trackAptDetail(deal.aptName)}
+                          >
                             <TrendingUp className="w-3 h-3 mr-1" />
                             단지 상세
                           </Button>

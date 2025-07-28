@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Star, CalendarIcon, X as XIcon, ArrowLeft } from "lucide-react";
+import { trackSearch, trackFavoriteRegion } from "@/lib/gtag";
 import axios from "axios";
 import { format, subDays } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -138,6 +139,9 @@ export default function Sidebar() {
     const next = [...favorites, region];
     setFavorites(next);
     localStorage.setItem(FAVORITE_KEY, JSON.stringify(next));
+    
+    // Google Analytics 추적
+    trackFavoriteRegion(region.name);
   };
 
   // 즐겨찾기 삭제
@@ -161,6 +165,9 @@ export default function Sidebar() {
       setModalOpen(true);
       return;
     }
+    
+    // Google Analytics 추적
+    trackSearch(sido, sigungu, dong !== "ALL" ? dong : undefined);
     
     const searchParams = new URLSearchParams();
     searchParams.set('sido', sido);
