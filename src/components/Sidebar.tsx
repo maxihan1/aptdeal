@@ -66,8 +66,7 @@ export default function Sidebar() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessages, setModalMessages] = useState<string[]>([]);
 
-  // 로딩 상태
-  const [isSearching, setIsSearching] = useState(false);
+
 
 
 
@@ -163,9 +162,6 @@ export default function Sidebar() {
       return;
     }
     
-    // 로딩 상태 시작
-    setIsSearching(true);
-    
     const searchParams = new URLSearchParams();
     searchParams.set('sido', sido);
     searchParams.set('sigungu', sigungu);
@@ -234,12 +230,7 @@ export default function Sidebar() {
     }
   }, [pathname, startDate, endDate]);
 
-  // 페이지 이동 시 로딩 상태 해제
-  useEffect(() => {
-    if (pathname === "/region") {
-      setIsSearching(false);
-    }
-  }, [pathname]);
+
 
   return (
     <aside className="mt-2 sm:mt-0 sm:static sm:w-72 bg-white border-r border-gray-200 flex flex-col min-h-screen p-4 gap-3">
@@ -382,17 +373,9 @@ export default function Sidebar() {
           <div className="space-y-2">
             <Button 
               onClick={handleSearch} 
-              disabled={isSearching}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isSearching ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  데이터를 불러오는 중입니다...
-                </>
-              ) : (
-                '🔍 조회'
-              )}
+              🔍 조회
             </Button>
             <Button variant="outline" onClick={addFavorite} disabled={!sido || !sigungu} className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50">
               <Star className="w-4 h-4 mr-1" /> 즐겨찾기

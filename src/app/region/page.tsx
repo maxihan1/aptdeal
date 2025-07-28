@@ -137,20 +137,24 @@ function RegionPage() {
     else setDong("");
 
     if (sido && sigungu && startDate && endDate) {
-      loadDeals(sido, sigungu, dongParam, startDate, endDate, dealType);
+      // 뒤로가기나 페이지 새로고침 시에만 캐시 사용
+      const isBackNavigation = !isLoading; // loading 파라미터가 없으면 뒤로가기로 간주
+      loadDeals(sido, sigungu, dongParam, startDate, endDate, dealType, isBackNavigation);
     }
   }, [searchParams]);
 
-  // 거래 데이터 조회 (캐시 우선, API 호출 경로를 /api/deals로 고정)
-  const loadDeals = async (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null) => {
+  // 거래 데이터 조회 (API 호출 경로를 /api/deals로 고정)
+  const loadDeals = async (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null, useCache: boolean = false) => {
     const cacheKey = generateCacheKey(sido, sigungu, dong, startDate, endDate, dealType);
     
-    // 캐시에서 데이터 확인
-    const cachedData = getCachedDeals(cacheKey);
-    if (cachedData) {
-      setDeals(cachedData);
-      setIsFromCache(true);
-      return;
+    // 캐시 사용이 허용된 경우에만 캐시 확인
+    if (useCache) {
+      const cachedData = getCachedDeals(cacheKey);
+      if (cachedData) {
+        setDeals(cachedData);
+        setIsFromCache(true);
+        return;
+      }
     }
 
     setLoading(true);
