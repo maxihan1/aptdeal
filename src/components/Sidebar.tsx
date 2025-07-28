@@ -37,8 +37,20 @@ export default function Sidebar() {
   const [sido, setSido] = useState<string>("");
   const [sigungu, setSigungu] = useState<string>("");
   const [dong, setDong] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // 최근 한 달 기본 날짜 설정
+  const getDefaultDates = () => {
+    const today = new Date();
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+    
+    return {
+      start: oneMonthAgo.toISOString().split('T')[0],
+      end: today.toISOString().split('T')[0]
+    };
+  };
+
+  const [startDate, setStartDate] = useState<string>(getDefaultDates().start);
+  const [endDate, setEndDate] = useState<string>(getDefaultDates().end);
   const [dealType, setDealType] = useState<"trade" | "rent">("trade");
 
   // 즐겨찾기 상태
