@@ -1,9 +1,17 @@
 import { MetadataRoute } from 'next'
-import { supabase } from '@/lib/supabase'
 
-// 아파트 데이터를 Supabase에서 가져오는 함수
+// 아파트 데이터를 가져오는 함수 (환경 변수 체크)
 async function getAptList(): Promise<string[]> {
+  // Supabase 환경 변수가 없으면 빈 배열 반환
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn('Supabase 환경 변수가 설정되지 않아 기본 sitemap을 생성합니다.');
+    return [];
+  }
+
   try {
+    // 동적으로 Supabase 클라이언트 가져오기
+    const { supabase } = await import('@/lib/supabase');
+    
     // Supabase에서 고유한 아파트명 목록을 가져옴
     const { data, error } = await supabase
       .from('apt_deals')
