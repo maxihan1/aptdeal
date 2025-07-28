@@ -1,33 +1,22 @@
 import { MetadataRoute } from 'next'
+import { getAptList } from '@/lib/database'
 
-// 아파트 데이터를 가져오는 함수 (환경 변수 체크)
-async function getAptList(): Promise<string[]> {
-  // Supabase 환경 변수가 없으면 빈 배열 반환
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.warn('Supabase 환경 변수가 설정되지 않아 기본 sitemap을 생성합니다.');
+// 아파트 데이터를 가져오는 함수 (MySQL 환경 변수 체크)
+async function getAptListForSitemap(): Promise<string[]> {
+  // MySQL 환경 변수가 없으면 빈 배열 반환
+  if (!process.env.MYSQL_HOST || !process.env.MYSQL_PASSWORD) {
+    console.warn('MySQL 환경 변수가 설정되지 않아 기본 sitemap을 생성합니다.');
     return [];
   }
 
   try {
-    // 동적으로 Supabase 클라이언트 가져오기
-    const { supabase } = await import('@/lib/supabase');
-    
-    // Supabase에서 고유한 아파트명 목록을 가져옴
-    const { data, error } = await supabase
-      .from('apt_deals')
-      .select('aptname')
-      .not('aptname', 'is', null)
-      .limit(1000) // 최대 1000개 아파트만 가져옴 (sitemap 크기 제한 고려)
-    
-    if (error) {
-      console.warn('아파트 목록을 가져오는데 실패했습니다:', error)
-      return []
-    }
+    // MySQL에서 고유한 아파트명 목록을 가져옴
+    const aptList = await getAptList();
     
     // 중복 제거 및 필터링
     const uniqueAptNames = [...new Set(
-      data
-        .map(item => item.aptname)
+      aptList
+        .map(item => (item as Record<string, unknown>).aptname as string)
         .filter(Boolean)
         .filter(name => typeof name === 'string' && name.trim().length > 0)
     )]
@@ -60,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   // 아파트 목록 가져오기
-  const aptList = await getAptList()
+  const aptList = await getAptListForSitemap()
   
   // 동적 아파트 페이지들 (최대 1000개로 제한)
   const aptPages: MetadataRoute.Sitemap = aptList.slice(0, 1000).map(aptName => ({

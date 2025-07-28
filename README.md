@@ -14,7 +14,7 @@
 
 - **Frontend**: Next.js 15, React, TypeScript
 - **UI**: Tailwind CSS, ShadCN UI
-- **Database**: Supabase (PostgreSQL)
+- **Database**: MySQL 8.0 (Apppass)
 - **Deployment**: Vercel
 
 ## 설치 및 실행
@@ -35,16 +35,37 @@ npm run build
 `.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
 
 ```env
-# Supabase 설정
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# MySQL 설정 (Apppass)
+MYSQL_HOST=mf27af89599f7400796e2aee79f112315.apppaas.app
+MYSQL_PORT=30047
+MYSQL_USER=root
+MYSQL_PASSWORD=Qlxmtptkd!2
+MYSQL_DATABASE=aptdeal
 
-# Google Analytics
+# Google Analytics (선택사항)
 NEXT_PUBLIC_GA_TRACKING_ID=your_ga_tracking_id
 
 # 사이트 URL (프로덕션 환경)
 NEXT_PUBLIC_BASE_URL=https://aptdeal.kr
+
+# Google Search Console
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=google147b28c0e8d03660
 ```
+
+## MySQL 데이터베이스 설정
+
+### 1. 연결 테스트
+```bash
+npm run mysql:test
+```
+
+### 2. 테이블 생성
+```bash
+npm run mysql:setup
+```
+
+### 3. 데이터 적재
+데이터 적재는 별도 스크립트를 통해 진행됩니다.
 
 ## SEO 및 검색 엔진 최적화
 

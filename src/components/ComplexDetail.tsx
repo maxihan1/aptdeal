@@ -75,8 +75,14 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   const allPrices = areaDealData.flatMap((a) => a.prices.map((p) => p.price));
   const overallAvg = allPrices.length ? Math.round(allPrices.reduce((a, b) => a + b, 0) / allPrices.length) : 0;
 
-  // 전체 평균 평당가 계산
-  const allPricePerPyeong = areaDealData.flatMap((a) => a.prices.map((p) => a.prices.length && a.area ? (p.price / parseFloat(a.area)) * 3.3058 : 0));
+  // 전체 평균 평당가 계산 (만원/평)
+  const allPricePerPyeong = areaDealData.flatMap((a) => {
+    if (!a.prices.length || !a.area) return [];
+    const areaNumber = parseFloat(a.area.replace('㎡', ''));
+    if (isNaN(areaNumber) || areaNumber === 0) return [];
+    const pyeong = areaNumber / 3.3058;
+    return a.prices.map((p) => p.price / pyeong); // '만원/평'
+  });
   const avgPricePerPyeong = allPricePerPyeong.length ? Math.round(allPricePerPyeong.reduce((a, b) => a + b, 0) / allPricePerPyeong.length) : 0;
 
   // 차트 데이터: 모든 거래 날짜에 맞춰 점 생성
@@ -218,15 +224,26 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     },
   }), [allDates]);
 
-  // 면적별 평균 가격
+  // 면적별 평균 가격과 평단가
   function getAreaAvgPrice(areaData: AreaDealData): number {
     if (!areaData.prices.length) return 0;
     const sum = areaData.prices.reduce((acc, cur) => acc + cur.price, 0);
     return Math.round(sum / areaData.prices.length);
   }
+  
+  function getAreaAvgPricePerPyeong(areaData: AreaDealData): number {
+    if (!areaData.prices.length || !areaData.area) return 0;
+    const areaNumber = parseFloat(areaData.area.replace('㎡', ''));
+    if (isNaN(areaNumber) || areaNumber === 0) return 0;
+    const avgPrice = areaData.prices.reduce((acc, cur) => acc + cur.price, 0) / areaData.prices.length; // '만원' 단위
+    const pyeong = areaNumber / 3.3058;
+    return Math.round(avgPrice / pyeong); // '만원/평'
+  }
+  
   const areaAvgList = areaDealData.map((area) => ({
     area: area.area,
     avg: getAreaAvgPrice(area),
+    avgPerPyeong: getAreaAvgPricePerPyeong(area),
     count: area.prices.length,
   }));
 
@@ -276,10 +293,14 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     : areaDealData.flatMap((a) => a.prices.map((p) => p.price));
   const jeonseOverallAvg = jeonseAllPrices.length ? Math.round(jeonseAllPrices.reduce((a, b) => a + b, 0) / jeonseAllPrices.length) : 0;
 
-  // 전체 전세 평당가 평균
-  const jeonseAllPricePerPyeong = isRent
-    ? jeonseAreaDealData.flatMap((a) => a.prices.map((p) => a.prices.length && a.area ? (p.price / parseFloat(a.area)) * 3.3058 : 0))
-    : areaDealData.flatMap((a) => a.prices.map((p) => a.prices.length && a.area ? (p.price / parseFloat(a.area)) * 3.3058 : 0));
+  // 전체 전세 평당가 평균 (만원/평)
+  const jeonseAllPricePerPyeong = (isRent ? jeonseAreaDealData : areaDealData).flatMap((a) => {
+    if (!a.prices.length || !a.area) return [];
+    const areaNumber = parseFloat(a.area.replace('㎡', ''));
+    if (isNaN(areaNumber) || areaNumber === 0) return [];
+    const pyeong = areaNumber / 3.3058;
+    return a.prices.map((p) => p.price / pyeong); // '만원/평'
+  });
   const jeonseAvgPricePerPyeong = jeonseAllPricePerPyeong.length ? Math.round(jeonseAllPricePerPyeong.reduce((a, b) => a + b, 0) / jeonseAllPricePerPyeong.length) : 0;
 
   // 전세 거래건수 (월세 0인 거래만)
@@ -290,15 +311,26 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     ? allDealsAreaDealData.flatMap((a) => a.prices.map((p) => p.price)).length
     : allPrices.length;
 
-  // 면적별 평균 전세 보증금
+  // 면적별 평균 전세 보증금과 평단가
   function getJeonseAreaAvgPrice(areaData: AreaDealData): number {
     if (!areaData.prices.length) return 0;
     const sum = areaData.prices.reduce((acc, cur) => acc + cur.price, 0);
     return Math.round(sum / areaData.prices.length);
   }
+  
+  function getJeonseAreaAvgPricePerPyeong(areaData: AreaDealData): number {
+    if (!areaData.prices.length || !areaData.area) return 0;
+    const areaNumber = parseFloat(areaData.area.replace('㎡', ''));
+    if (isNaN(areaNumber) || areaNumber === 0) return 0;
+    const avgPrice = areaData.prices.reduce((acc, cur) => acc + cur.price, 0) / areaData.prices.length; // '만원' 단위
+    const pyeong = areaNumber / 3.3058;
+    return Math.round(avgPrice / pyeong); // '만원/평'
+  }
+  
   const jeonseAreaAvgList = jeonseAreaDealData.map((area) => ({
     area: area.area,
     avg: getJeonseAreaAvgPrice(area),
+    avgPerPyeong: getJeonseAreaAvgPricePerPyeong(area),
     count: area.prices.length,
   }));
 
@@ -426,6 +458,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <tr className="bg-gray-100">
                   <th className="py-3 px-1 font-semibold text-gray-700">면적(㎡)</th>
                   <th className="py-3 px-1 font-semibold text-gray-700">평균 전세 보증금</th>
+                  <th className="py-3 px-1 font-semibold text-gray-700">평단가</th>
                   <th className="py-3 px-1 font-semibold text-gray-700">거래수</th>
                 </tr>
               </thead>
@@ -434,6 +467,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   <tr key={row.area} className="border-t last:border-b">
                     <td className="py-3 px-1 text-center">{row.area}</td>
                     <td className="py-3 px-1 text-center font-bold text-primary">{formatKoreanPrice(row.avg)}</td>
+                    <td className="py-3 px-1 text-center font-bold text-orange-600">{row.avgPerPyeong.toLocaleString()}만원/평</td>
                     <td className="py-3 px-1 text-center text-gray-600">{row.count}건</td>
                   </tr>
                 ))}
@@ -452,6 +486,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   <Card className="shadow-sm border-2 border-muted p-2 md:p-3 flex flex-col items-center" style={{ borderColor: `hsl(${(idx * 120) % 360}, 70%, 55%)` }}>
                     <div className="text-[11px] md:text-xs font-semibold mb-0.5 md:mb-1">{row.area}㎡</div>
                     <div className="text-xs md:text-base font-bold text-primary mb-0.5 md:mb-1">{formatKoreanPrice(row.avg)}</div>
+                    <div className="text-[10px] md:text-[11px] font-bold text-orange-600 mb-0.5">{row.avgPerPyeong.toLocaleString()}만원/평</div>
                     <div className="text-[10px] md:text-[11px] text-gray-500">{row.count}건</div>
                   </Card>
                 </div>
@@ -586,6 +621,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
               <tr className="bg-gray-100">
                 <th className="py-3 px-1 font-semibold text-gray-700">면적(㎡)</th>
                 <th className="py-3 px-1 font-semibold text-gray-700">평균 거래금액</th>
+                <th className="py-3 px-1 font-semibold text-gray-700">평단가</th>
                 <th className="py-3 px-1 font-semibold text-gray-700">거래수</th>
               </tr>
             </thead>
@@ -594,6 +630,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <tr key={row.area} className="border-t last:border-b">
                   <td className="py-3 px-1 text-center">{row.area}</td>
                   <td className="py-3 px-1 text-center font-bold text-primary">{formatKoreanPrice(row.avg)}</td>
+                  <td className="py-3 px-1 text-center font-bold text-orange-600">{row.avgPerPyeong.toLocaleString()}만원/평</td>
                   <td className="py-3 px-1 text-center text-gray-600">{row.count}건</td>
                 </tr>
               ))}
@@ -612,6 +649,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <Card className="shadow-sm border-2 border-muted p-2 md:p-3 flex flex-col items-center" style={{ borderColor: `hsl(${(idx * 120) % 360}, 70%, 55%)` }}>
                   <div className="text-[11px] md:text-xs font-semibold mb-0.5 md:mb-1">{row.area}㎡</div>
                   <div className="text-xs md:text-base font-bold text-primary mb-0.5 md:mb-1">{formatKoreanPrice(row.avg)}</div>
+                  <div className="text-[10px] md:text-[11px] font-bold text-orange-600 mb-0.5">{row.avgPerPyeong.toLocaleString()}만원/평</div>
                   <div className="text-[10px] md:text-[11px] text-gray-500">{row.count}건</div>
                 </Card>
               </div>
