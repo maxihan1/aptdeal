@@ -40,6 +40,7 @@ interface RentDeal {
 
 function RegionPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [deals, setDeals] = useState<(Deal|RentDeal)[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAptName, setSelectedAptName] = useState<string | null>(null);
@@ -55,8 +56,53 @@ function RegionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 캐시 관련 상태
+  const [isFromCache, setIsFromCache] = useState(false);
+
   // sidebarOnly 쿼리 파라미터가 있으면 사이드바만 보이기
   const sidebarOnly = searchParams.get('sidebarOnly') === '1';
+
+  // 캐시 관련 유틸리티 함수들
+  const generateCacheKey = (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null) => {
+    return `deals_${sido}_${sigungu}_${dong || 'all'}_${startDate}_${endDate}_${dealType || 'trade'}`;
+  };
+
+  const getCachedDeals = (cacheKey: string) => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // 캐시 유효기간: 30분
+        const now = Date.now();
+        const cacheAge = now - timestamp;
+        const cacheExpiry = 30 * 60 * 1000; // 30분
+        
+        if (cacheAge < cacheExpiry) {
+          return data;
+        } else {
+          // 만료된 캐시 삭제
+          localStorage.removeItem(cacheKey);
+        }
+      }
+    } catch (error) {
+      console.error('캐시 읽기 오류:', error);
+    }
+    return null;
+  };
+
+  const setCachedDeals = (cacheKey: string, data: (Deal|RentDeal)[]) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('캐시 저장 오류:', error);
+    }
+  };
+
+
 
   useEffect(() => {
     // URL 파라미터에서 검색 조건 가져오기
@@ -66,6 +112,16 @@ function RegionPage() {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const dealType = searchParams.get('dealType');
+    const isLoading = searchParams.get('loading') === 'true';
+
+    // 로딩 상태가 URL 파라미터로 전달된 경우 즉시 로딩 시작
+    if (isLoading) {
+      setLoading(true);
+      // URL에서 loading 파라미터 제거
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('loading');
+      router.replace(`/region/?${newParams.toString()}`);
+    }
 
     // 동 옵션 불러오기 (시도와 시군구가 있을 때만)
     if (sido && sigungu) {
@@ -85,19 +141,33 @@ function RegionPage() {
     }
   }, [searchParams]);
 
-  // 거래 데이터 조회 (API 호출 경로를 /api/deals로 고정)
+  // 거래 데이터 조회 (캐시 우선, API 호출 경로를 /api/deals로 고정)
   const loadDeals = async (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null) => {
+    const cacheKey = generateCacheKey(sido, sigungu, dong, startDate, endDate, dealType);
+    
+    // 캐시에서 데이터 확인
+    const cachedData = getCachedDeals(cacheKey);
+    if (cachedData) {
+      setDeals(cachedData);
+      setIsFromCache(true);
+      return;
+    }
+
     setLoading(true);
+    setIsFromCache(false);
+    
     try {
       const params: Record<string, string> = { sido, sigungu, startDate, endDate };
       if (dong) params.dong = dong;
       if (dealType === 'rent') {
         const res = await axios.get('/api/rent', { params });
         setDeals(res.data);
+        setCachedDeals(cacheKey, res.data);
       } else {
         if (dealType) params.dealType = dealType;
         const res = await axios.get('/api/deals', { params });
         setDeals(res.data);
+        setCachedDeals(cacheKey, res.data);
       }
     } catch {
       setDeals([]);
@@ -211,8 +281,6 @@ function RegionPage() {
     }
   };
 
-  const router = useRouter();
-
   if (sidebarOnly) {
     return <Sidebar />;
   }
@@ -301,14 +369,25 @@ function RegionPage() {
         >
           전용면적 {getSortIcon('area')}
         </Button>
-        <Button
-          size="sm"
-          variant={sortField === 'price' ? 'default' : 'outline'}
-          onClick={() => toggleSort('price')}
-          className="text-xs"
-        >
-          거래금액 {getSortIcon('price')}
-        </Button>
+        {searchParams.get('dealType') === 'rent' ? (
+          <Button
+            size="sm"
+            variant={sortField === 'deposit' ? 'default' : 'outline'}
+            onClick={() => toggleSort('deposit')}
+            className="text-xs"
+          >
+            보증금 {getSortIcon('deposit')}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant={sortField === 'price' ? 'default' : 'outline'}
+            onClick={() => toggleSort('price')}
+            className="text-xs"
+          >
+            거래금액 {getSortIcon('price')}
+          </Button>
+        )}
         <Button
           size="sm"
           variant={sortField === 'date' ? 'default' : 'outline'}
@@ -317,14 +396,16 @@ function RegionPage() {
         >
           계약일 {getSortIcon('date')}
         </Button>
-        <Button
-          size="sm"
-          variant={sortField === 'cdealType' ? 'default' : 'outline'}
-          onClick={() => toggleSort('cdealType')}
-          className="text-xs"
-        >
-          계약해제 {getSortIcon('cdealType')}
-        </Button>
+        {searchParams.get('dealType') !== 'rent' && (
+          <Button
+            size="sm"
+            variant={sortField === 'cdealType' ? 'default' : 'outline'}
+            onClick={() => toggleSort('cdealType')}
+            className="text-xs"
+          >
+            계약해제 {getSortIcon('cdealType')}
+          </Button>
+        )}
         <Button
           size="sm"
           variant={sortField === 'buildYear' ? 'default' : 'outline'}
@@ -339,7 +420,10 @@ function RegionPage() {
       {loading ? (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center text-gray-500">로딩 중...</div>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+              <div className="text-lg font-semibold text-blue-600">데이터를 불러오는 중입니다...</div>
+            </div>
           </CardContent>
         </Card>
       ) : filteredDeals.length > 0 ? (
@@ -365,12 +449,32 @@ function RegionPage() {
                         <tr className="bg-gray-50">
                           <th className="px-3 py-2 border text-center">지역</th>
                           <th className="px-3 py-2 border text-center">단지명</th>
-                          <th className="px-3 py-2 border text-center">전용면적</th>
-                          <th className="px-3 py-2 border text-center">보증금</th>
+                          <th className="px-3 py-2 border text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('area')}>
+                            <div className="flex items-center justify-center gap-1">
+                              전용면적
+                              {getSortIcon('area')}
+                            </div>
+                          </th>
+                          <th className="px-3 py-2 border text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('deposit')}>
+                            <div className="flex items-center justify-center gap-1">
+                              보증금
+                              {getSortIcon('deposit')}
+                            </div>
+                          </th>
                           <th className="px-3 py-2 border text-center">월세금액</th>
-                          <th className="px-3 py-2 border text-center">계약일</th>
+                          <th className="px-3 py-2 border text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('date')}>
+                            <div className="flex items-center justify-center gap-1">
+                              계약일
+                              {getSortIcon('date')}
+                            </div>
+                          </th>
                           <th className="px-3 py-2 border text-center">계약유형</th>
-                          <th className="px-3 py-2 border text-center">건축년도</th>
+                          <th className="px-3 py-2 border text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('buildYear')}>
+                            <div className="flex items-center justify-center gap-1">
+                              건축년도
+                              {getSortIcon('buildYear')}
+                            </div>
+                          </th>
                           <th className="px-3 py-2 border text-center">단지상세</th>
                         </tr>
                       </thead>
