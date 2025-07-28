@@ -37,7 +37,7 @@ export type ComplexInfo = {
 // 면적별 거래 데이터 타입
 export type AreaDealData = {
   area: string; // 예: "84㎡"
-  prices: { date: string; price: number }[]; // 라인차트용
+  prices: { date: string; price: number; rent?: number }[]; // 라인차트용 (rent 필드 추가)
 };
 
 interface ComplexDetailProps {
@@ -252,15 +252,19 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
 
   // 전세(보증금, 월세 0)만 필터링
   const isRent = dealType === 'rent';
-  // areaDealData는 [{ area, prices: [{date, price}]}] 구조인데, price가 보증금, rent가 0인 데이터만 사용해야 함
-  // areaDealData를 rent===0인 데이터만으로 재가공
+  // 전월세 데이터에서 월세가 0인 전세 데이터만 필터링
   let jeonseAreaDealData = areaDealData;
+  let allDealsAreaDealData = areaDealData; // 총 거래건수용 (전세 + 월세)
+  
   if (isRent) {
-    // areaDealData의 prices에 rent 필드가 없으므로, info.areaDealRawData를 prop으로 넘기거나, 프론트에서 rentRawData를 별도 관리해야 함
-    // 여기서는 areaDealData의 prices에 price가 보증금(rent===0)만 있다고 가정하고, areaDealData를 그대로 사용
-    // 실제로는 rentRawData에서 rent===0인 데이터만 area별로 group해서 areaDealData를 만들어야 함
-    // 아래는 areaDealData.prices에서 price가 0이 아닌 것만 남기는 예시
+    // 전세만 필터링 (rent가 0 또는 undefined인 데이터만)
     jeonseAreaDealData = areaDealData.map(area => ({
+      ...area,
+      prices: area.prices.filter(p => p.price > 0 && (p.rent === 0 || p.rent === undefined)),
+    })).filter(area => area.prices.length > 0);
+    
+    // 전체 거래 (전세 + 월세 모두 포함)
+    allDealsAreaDealData = areaDealData.map(area => ({
       ...area,
       prices: area.prices.filter(p => p.price > 0),
     })).filter(area => area.prices.length > 0);
@@ -278,8 +282,13 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     : areaDealData.flatMap((a) => a.prices.map((p) => a.prices.length && a.area ? (p.price / parseFloat(a.area)) * 3.3058 : 0));
   const jeonseAvgPricePerPyeong = jeonseAllPricePerPyeong.length ? Math.round(jeonseAllPricePerPyeong.reduce((a, b) => a + b, 0) / jeonseAllPricePerPyeong.length) : 0;
 
-  // 전세 거래건수
+  // 전세 거래건수 (월세 0인 거래만)
   const jeonseTotalDeals = jeonseAllPrices.length;
+  
+  // 전체 거래건수 (전세 + 월세 모두 포함)
+  const allTotalDeals = isRent 
+    ? allDealsAreaDealData.flatMap((a) => a.prices.map((p) => p.price)).length
+    : allPrices.length;
 
   // 면적별 평균 전세 보증금
   function getJeonseAreaAvgPrice(areaData: AreaDealData): number {
@@ -378,7 +387,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <tr>
                   <td className="py-3 px-1 text-center font-bold text-blue-700">{formatKoreanPrice(jeonseOverallAvg)}</td>
                   <td className="py-3 px-1 text-center font-bold text-orange-700">{jeonseAvgPricePerPyeong.toLocaleString()}만원/평</td>
-                  <td className="py-3 px-1 text-center font-bold text-green-700">{jeonseTotalDeals.toLocaleString()}건</td>
+                  <td className="py-3 px-1 text-center font-bold text-green-700">{(isRent ? allTotalDeals : jeonseTotalDeals).toLocaleString()}건</td>
                   {/* <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td> */}
                 </tr>
               </tbody>
@@ -399,7 +408,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
             <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
               <BarChart className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-green-500" />
               <div className="text-[11px] md:text-xs text-gray-500 mb-0.5 md:mb-1">총 거래 건수</div>
-              <div className="text-sm md:text-lg font-bold text-green-700">{jeonseTotalDeals.toLocaleString()}건</div>
+              <div className="text-sm md:text-lg font-bold text-green-700">{(isRent ? allTotalDeals : jeonseTotalDeals).toLocaleString()}건</div>
             </div>
             {/* <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
               <Home className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-purple-500" />

@@ -184,12 +184,13 @@ function RegionPage() {
   const availableAreas = Array.from(new Set(dongFilteredDeals.map(deal => deal.area))).sort((a, b) => a - b);
 
   const formatPrice = (price: number) => {
+    if (price === 0) return '0원';
     const eok = Math.floor(price / 10000);
     const chun = price % 10000;
     let result = '';
     if (eok > 0) result += `${eok}억`;
     if (chun > 0) result += `${chun.toLocaleString()}만원`;
-    return result;
+    return result || '0원';
   };
 
   // 정렬 아이콘 렌더링 함수 (return 문 바로 위)
@@ -380,7 +381,13 @@ function RegionPage() {
                             <td className="px-3 py-2 border text-center font-semibold">{deal.aptName}</td>
                             <td className="px-3 py-2 border text-center">{deal.area}㎡</td>
                             <td className="px-3 py-2 border text-center text-blue-600 font-bold">{formatPrice(deal.deposit)}</td>
-                            <td className="px-3 py-2 border text-center text-blue-600 font-bold">{formatPrice(deal.rent)}</td>
+                            <td className="px-3 py-2 border text-center">
+                              {deal.rent === 0 ? (
+                                <span className="text-gray-500 text-xs">전세</span>
+                              ) : (
+                                <span className="text-red-600 font-medium text-xs">{formatPrice(deal.rent)}</span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 border text-center">{deal.date}</td>
                             <td className="px-3 py-2 border text-center">{deal.rentType}</td>
                             <td className="px-3 py-2 border text-center">{deal.buildYear}</td>
@@ -510,9 +517,28 @@ function RegionPage() {
                           <h3 className="font-semibold text-sm">{deal.aptName}</h3>
                           <p className="text-xs text-gray-600">{deal.region}</p>
                         </div>
-                        <span className="font-bold text-blue-600 text-base">
-                          {'price' in deal ? formatPrice(deal.price ?? 0) : ''}
-                        </span>
+                        <div className="text-right">
+                          {searchParams.get('dealType') === 'rent' ? (
+                            <div>
+                              <div className="font-bold text-blue-600 text-base">
+                                {'deposit' in deal ? formatPrice(deal.deposit ?? 0) : ''}
+                              </div>
+                              <div className="text-xs">
+                                {'rent' in deal && deal.rent === 0 ? (
+                                  <span className="text-gray-500">전세</span>
+                                ) : (
+                                  <span className="text-red-600 font-medium">
+                                    {'rent' in deal ? `월세 ${formatPrice(deal.rent ?? 0)}` : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-blue-600 text-base">
+                              {'price' in deal ? formatPrice(deal.price ?? 0) : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-1 text-xs text-gray-600">
                         <div>면적: {deal.area}㎡</div>
