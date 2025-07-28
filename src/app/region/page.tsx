@@ -254,8 +254,23 @@ function RegionPage() {
     });
   }, [deals, dong]);
 
+  // 단지명 옵션: 동 필터링된 데이터에서 생성
   const availableAptNames = Array.from(new Set(dongFilteredDeals.map(deal => deal.aptName)));
-  const availableAreas = Array.from(new Set(dongFilteredDeals.map(deal => deal.area))).sort((a, b) => a - b);
+
+  // 면적 옵션: 단지 선택 여부에 따라 다르게 생성
+  const availableAreas = useMemo(() => {
+    if (selectedAptName) {
+      // 단지가 선택된 경우: 해당 단지의 면적만 보여줌
+      return Array.from(new Set(
+        dongFilteredDeals
+          .filter(deal => deal.aptName === selectedAptName)
+          .map(deal => deal.area)
+      )).sort((a, b) => a - b);
+    } else {
+      // 전체 단지 선택된 경우: 동 필터링된 모든 면적 보여줌
+      return Array.from(new Set(dongFilteredDeals.map(deal => deal.area))).sort((a, b) => a - b);
+    }
+  }, [dongFilteredDeals, selectedAptName]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return '0원';
