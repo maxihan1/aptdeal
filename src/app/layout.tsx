@@ -1,17 +1,10 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Sidebar from "../components/Sidebar";
-import ClientLayout from "./ClientLayout";
+import { Inter } from 'next/font/google';
+import './globals.css';
+import ClientLayout from './ClientLayout';
 import Script from "next/script";
 import { GA_TRACKING_ID } from "@/lib/gtag";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
   subsets: ["latin"],
 });
 
@@ -82,7 +75,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.className} antialiased`}
       >
         <ClientLayout>
           {children}

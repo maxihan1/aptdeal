@@ -1,20 +1,20 @@
-import React from "react";
+import React from 'react';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler,
+  TooltipItem,
+} from 'chart.js';
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { MapPin, BarChart, ArrowLeft } from "lucide-react";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Legend,
-  Tooltip,
-  Filler,
-} from "chart.js";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { TooltipItem, Tick, Scale } from 'chart.js';
 
 console.log('[ComplexDetail] 렌더링됨');
 
@@ -71,6 +71,9 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   // 차트에 표시할 데이터(면적 선택)
   const chartAreas = selectedArea === "전체" ? areaDealData : areaDealData.filter((a) => a.area === selectedArea);
 
+  // 선택된 면적의 인덱스 찾기 (색상 일치를 위해)
+  const selectedAreaIndex = selectedArea !== "전체" ? areaDealData.findIndex((a) => a.area === selectedArea) : -1;
+
   // 전체 평균 가격: 모든 면적 데이터 합산
   const allPrices = areaDealData.flatMap((a) => a.prices.map((p) => p.price));
   const overallAvg = allPrices.length ? Math.round(allPrices.reduce((a, b) => a + b, 0) / allPrices.length) : 0;
@@ -85,28 +88,41 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   });
   const avgPricePerPyeong = allPricePerPyeong.length ? Math.round(allPricePerPyeong.reduce((a, b) => a + b, 0) / allPricePerPyeong.length) : 0;
 
-  // 차트 데이터: 모든 거래 날짜에 맞춰 점 생성
+  // 차트 데이터: 라인은 평균, 점은 모든 거래
   const chartData = {
     labels: allDates,
-    datasets: chartAreas.map((area, idx) => ({
-      label: area.area,
-      data: allDates.map(
-        (date) => {
-          const found = area.prices.find((p) => p.date === date);
-          return found ? found.price : null;
+    datasets: chartAreas.map((area, idx) => {
+      // 선택된 면적이 있을 때 해당 면적의 색상 사용, 없으면 기존 색상 사용
+      const colorIndex = selectedArea !== "전체" ? selectedAreaIndex : idx;
+      const baseColor = `hsl(${(colorIndex * 120) % 360}, 70%, 55%)`;
+      
+      // 라인용 데이터: 날짜별 평균 계산
+      const lineData = allDates.map((date) => {
+        const sameDatePrices = area.prices.filter((p) => p.date === date);
+        if (sameDatePrices.length === 0) {
+          return null; // 해당 날짜에 거래가 없으면 null
+        } else {
+          // 평균 계산
+          const avgPrice = sameDatePrices.reduce((sum, p) => sum + p.price, 0) / sameDatePrices.length;
+          return Math.round(avgPrice);
         }
-      ),
-      borderColor: `hsl(${(idx * 120) % 360}, 70%, 55%)`,
-      backgroundColor: `hsla(${(idx * 120) % 360}, 70%, 80%, 0.18)`,
-      pointBackgroundColor: `hsl(${(idx * 120) % 360}, 70%, 55%)`,
-      pointBorderColor: '#fff',
-      pointRadius: 5,
-      pointHoverRadius: 8,
-      borderWidth: 3,
-      tension: 0.45,
-      fill: true,
-      spanGaps: true,
-    })),
+      });
+      
+      return {
+        label: area.area,
+        data: lineData,
+        borderColor: baseColor,
+        backgroundColor: `hsla(${(colorIndex * 120) % 360}, 70%, 80%, 0.18)`,
+        pointBackgroundColor: baseColor,
+        pointBorderColor: '#fff',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        borderWidth: 3,
+        tension: 0.45,
+        fill: true,
+        spanGaps: true,
+      };
+    }),
   };
 
   // 차트 옵션: x축 라벨은 월 단위(1일만), 툴팁은 일 단위
@@ -131,98 +147,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
         },
       },
     },
-    scales: {
-      x: {
-        grid: {
-          color: '#e5e7eb',
-        },
-        ticks: {
-          callback: function(value: number | string, index: number, ticks: Tick[]): string | number | null {
-            const total = ticks.length;
-            const isMobile = window.innerWidth <= 768;
-            
-            if (isMobile) {
-              // 모바일: 시작과 끝만 표시
-              if (index === 0 || index === total - 1) {
-                // value가 날짜 인덱스이므로 allDates 배열에서 가져옴
-                const dateIndex = typeof value === 'number' ? value : parseInt(value as string);
-                const date = allDates[dateIndex];
-                if (date) {
-                  const [year, month] = date.split('-');
-                  return `${year}년 ${Number(month)}월`;
-                }
-                return '';
-              }
-              return '';
-            } else {
-              // 데스크톱: 기존 로직 유지
-              if (total <= 10) {
-                const dateIndex = typeof value === 'number' ? value : parseInt(value as string);
-                const date = allDates[dateIndex];
-                if (date) {
-                  const [year, month, day] = date.split('-');
-                  return `${year}년 ${Number(month)}월` + (total <= 10 ? ` ${Number(day)}일` : '');
-                }
-                return '';
-              }
-              const step = Math.floor((total - 1) / 9);
-              if (index === 0 || index === total - 1 || index % step === 0) {
-                const dateIndex = typeof value === 'number' ? value : parseInt(value as string);
-                const date = allDates[dateIndex];
-                if (date) {
-                  const [year, month] = date.split('-');
-                  return `${year}년 ${Number(month)}월`;
-                }
-                return '';
-              }
-              return '';
-            }
-          },
-          color: '#888',
-          font: { size: 14 },
-          maxRotation: 0,
-          autoSkip: false,
-        },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: function(this: Scale, value: string | number): string | number | null {
-            const isMobile = window.innerWidth <= 768;
-            const numValue = typeof value === 'number' ? value : parseFloat(value);
-            if (isMobile) {
-              // 모바일: 억 단위만 표시
-              if (numValue >= 10000 && numValue % 10000 === 0) {
-                const eok = Math.floor(numValue / 10000);
-                return `${eok}억원`;
-              }
-              return '';
-            } else {
-              // 데스크톱: 억/천만원 단위 표시
-              if (numValue >= 10000) {
-                const eok = Math.floor(numValue / 10000);
-                const chun = Math.round((numValue % 10000) / 1000);
-                if (eok > 0 && chun > 0) {
-                  return `${eok}억 ${chun}천만원`;
-                } else if (eok > 0) {
-                  return `${eok}억원`;
-                } else {
-                  return `${chun}천만원`;
-                }
-              }
-              return numValue;
-            }
-          },
-          color: '#888',
-          font: { size: 14 },
-          maxTicksLimit: 6,
-        },
-        grid: {
-          color: '#eee',
-        },
-      },
-    },
-  }), [allDates]);
+  }), []);
 
   // 면적별 평균 가격과 평단가
   function getAreaAvgPrice(areaData: AreaDealData): number {
@@ -339,32 +264,73 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     new Set(jeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.date)))
   ).sort(), [jeonseAreaDealData]);
   const jeonseChartAreas = selectedArea === "전체" ? jeonseAreaDealData : jeonseAreaDealData.filter((a) => a.area === selectedArea);
+  
+  // 전월세에서 선택된 면적의 인덱스 찾기 (색상 일치를 위해)
+  const jeonseSelectedAreaIndex = selectedArea !== "전체" ? jeonseAreaDealData.findIndex((a) => a.area === selectedArea) : -1;
+  
   const jeonseChartData = {
     labels: jeonseAllDates,
-    datasets: jeonseChartAreas.map((area, idx) => ({
-      label: area.area,
-      data: jeonseAllDates.map(
-        (date) => {
-          const found = area.prices.find((p) => p.date === date);
-          return found ? found.price : null;
+    datasets: jeonseChartAreas.map((area, idx) => {
+      // 선택된 면적이 있을 때 해당 면적의 색상 사용, 없으면 기존 색상 사용
+      const colorIndex = selectedArea !== "전체" ? jeonseSelectedAreaIndex : idx;
+      const baseColor = `hsl(${(colorIndex * 120) % 360}, 70%, 55%)`;
+      
+      // 라인용 데이터: 날짜별 평균 계산
+      const lineData = jeonseAllDates.map((date) => {
+        const sameDatePrices = area.prices.filter((p) => p.date === date);
+        if (sameDatePrices.length === 0) {
+          return null; // 해당 날짜에 거래가 없으면 null
+        } else {
+          // 평균 계산
+          const avgPrice = sameDatePrices.reduce((sum, p) => sum + p.price, 0) / sameDatePrices.length;
+          return Math.round(avgPrice);
         }
-      ),
-      borderColor: `hsl(${(idx * 120) % 360}, 70%, 55%)`,
-      backgroundColor: `hsla(${(idx * 120) % 360}, 70%, 80%, 0.18)`,
-      pointBackgroundColor: `hsl(${(idx * 120) % 360}, 70%, 55%)`,
-      pointBorderColor: '#fff',
-      pointRadius: 5,
-      pointHoverRadius: 8,
-      borderWidth: 3,
-      tension: 0.45,
-      fill: true,
-      spanGaps: true,
-    })),
+      });
+      
+      return {
+        label: area.area,
+        data: lineData,
+        borderColor: baseColor,
+        backgroundColor: `hsla(${(colorIndex * 120) % 360}, 70%, 80%, 0.18)`,
+        pointBackgroundColor: baseColor,
+        pointBorderColor: '#fff',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        borderWidth: 3,
+        tension: 0.45,
+        fill: true,
+        spanGaps: true,
+      };
+    }),
   };
 
   // 차트 렌더링 직전 진단용 로그
   console.log('[전월세] jeonseChartData', jeonseChartData);
   console.log('[전월세] 차트 렌더링 조건:', jeonseChartAreas.length > 0, jeonseAllDates.length > 0);
+
+  // 전월세 차트 옵션: 전월세 데이터에 맞게 조절
+  const jeonseChartOptions = React.useMemo(() => ({
+    responsive: true,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: '#222',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        padding: 12,
+        callbacks: {
+          title: (items: TooltipItem<'line'>[]) => {
+            // 항상 일 단위로 상세 표시
+            const date = items[0].label; // YYYY-MM-DD
+            const [year, month, day] = date.split('-');
+            return `${year}년 ${month}월 ${day}일`;
+          },
+        },
+      },
+    },
+  }), []);
 
   // 진단용 콘솔 로그
   React.useEffect(() => {
@@ -512,19 +478,27 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
           {/* 전월세 차트 영역 */}
           <div className="w-full h-56 md:h-96 flex items-center justify-start rounded-md border mt-1 md:mt-2" style={{ background: '#f5f7fa' }}>
             {jeonseChartAreas.length > 0 && jeonseAllDates.length > 0 ? (
-              <Line data={jeonseChartData} options={chartOptions} />
+              <Line data={jeonseChartData} options={jeonseChartOptions} />
             ) : (
               <span className="text-muted-foreground">[거래 데이터 없음]</span>
             )}
           </div>
           {/* 범례 for Rent */}
           <div className="flex gap-4 mt-2">
-            {jeonseChartAreas.map((area, idx) => (
-              <div key={area.area} className="flex items-center gap-1 text-xs">
-                <span className="inline-block w-3 h-1.5 rounded-full" style={{ backgroundColor: `hsl(${(idx * 60) % 360}, 70%, 60%)` }} />
-                {area.area}
-              </div>
-            ))}
+            {jeonseChartAreas.map((area, idx) => {
+              // 선택된 면적이 있을 때 해당 면적의 색상 사용, 없으면 기존 색상 사용
+              const colorIndex = selectedArea !== "전체" ? jeonseSelectedAreaIndex : idx;
+              
+              return (
+                <div key={area.area} className="flex items-center gap-1 text-xs">
+                  <span 
+                    className="inline-block w-3 h-1.5 rounded-full" 
+                    style={{ backgroundColor: `hsl(${(colorIndex * 120) % 360}, 70%, 55%)` }} 
+                  />
+                  {area.area}
+                </div>
+              );
+            })}
           </div>
           {/* Mobile Footer Disclaimer */}
           <div className="block md:hidden w-full text-center text-[11px] text-gray-400 pt-2 pb-1">
@@ -682,15 +656,20 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
         </div>
         {/* 범례 (예시) */}
         <div className="flex gap-4 mt-2">
-          {chartAreas.map((area, idx) => (
-            <div key={area.area} className="flex items-center gap-1 text-xs">
-              <span
-                className="inline-block w-3 h-1.5 rounded-full"
-                style={{ backgroundColor: `hsl(${(idx * 60) % 360}, 70%, 60%)` }}
-              />
-              {area.area}
-            </div>
-          ))}
+          {chartAreas.map((area, idx) => {
+            // 선택된 면적이 있을 때 해당 면적의 색상 사용, 없으면 기존 색상 사용
+            const colorIndex = selectedArea !== "전체" ? selectedAreaIndex : idx;
+            
+            return (
+              <div key={area.area} className="flex items-center gap-1 text-xs">
+                <span
+                  className="inline-block w-3 h-1.5 rounded-full"
+                  style={{ backgroundColor: `hsl(${(colorIndex * 120) % 360}, 70%, 55%)` }}
+                />
+                {area.area}
+              </div>
+            );
+          })}
         </div>
         {/* 카드 하단 안내 (모바일에서만) */}
         <div className="block md:hidden w-full text-center text-[11px] text-gray-400 pt-2 pb-1">
