@@ -43,6 +43,12 @@ interface RentDeal {
 function RegionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
+  // 검색 파라미터 가져오기
+  const sido = searchParams.get('sido') || '';
+  const sigungu = searchParams.get('sigungu') || '';
+  const dongParam = searchParams.get('dong') || '';
+  
   const [deals, setDeals] = useState<(Deal|RentDeal)[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAptName, setSelectedAptName] = useState<string | null>(null);
@@ -64,6 +70,18 @@ function RegionPage() {
 
   // sidebarOnly 쿼리 파라미터가 있으면 사이드바만 보이기
   const sidebarOnly = searchParams.get('sidebarOnly') === '1';
+
+  // 검색 지역 표시 텍스트 생성
+  const getSearchLocationText = () => {
+    if (sido && sigungu && dongParam) {
+      return `${sido} ${sigungu} ${dongParam}`;
+    } else if (sido && sigungu) {
+      return `${sido} ${sigungu} 전체`;
+    } else if (sido) {
+      return `${sido} 전체`;
+    }
+    return '전국';
+  };
 
   // 캐시 관련 유틸리티 함수들
   const generateCacheKey = (sido: string, sigungu: string, dong: string | null, startDate: string, endDate: string, dealType: string | null) => {
@@ -320,64 +338,72 @@ function RegionPage() {
           &larr; 뒤로가기
         </button>
       </div>
+
+      {/* 검색 지역 표시 */}
+      <div className="mb-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+          <span className="text-sm font-medium text-blue-800 truncate">
+            검색 지역: {getSearchLocationText()}
+          </span>
+        </div>
+      </div>
+
       {/* 필터 */}
-      <Card className="mb-2 rounded-md border shadow-none">
-        <CardHeader className="flex flex-row items-center justify-between p-1 pb-0" />
-        <CardContent className="px-1 pt-1 pb-0">
-            {/* 모바일/전체: 가로 스크롤 필터 */}
-            <div className="flex flex-row gap-1 overflow-x-auto pb-0 mb-1">
-              <div className="min-w-[120px]">
-                <label className="text-xs font-medium mb-1 block">단지명</label>
-                <Select 
-                  value={selectedAptName || ''} 
-                  onValueChange={(value) => setSelectedAptName(value === 'all' ? null : value)}
-                >
-                  <SelectTrigger className="w-full h-9 text-xs">
-                    <SelectValue placeholder="전체 단지" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">전체 단지</SelectItem>
-                    {availableAptNames.sort((a, b) => a.localeCompare(b, 'ko')).map(name => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-[110px]">
-                <label className="text-xs font-medium mb-1 block">면적</label>
-                <Select 
-                  value={selectedArea?.toString() || ''} 
-                  onValueChange={(value) => setSelectedArea(value === 'all' ? null : Number(value))}
-                >
-                  <SelectTrigger className="w-full h-9 text-xs">
-                    <SelectValue placeholder="전체 면적" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">전체 면적</SelectItem>
-                    {availableAreas.map(area => (
-                      <SelectItem key={area} value={area.toString()}>
-                        {area}㎡
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-[110px]">
-                <label className="text-xs font-medium mb-1 block">읍면동</label>
-                <Select value={dong} onValueChange={setDong}>
-                  <SelectTrigger className="w-full h-9 text-xs">
-                    <SelectValue placeholder="읍면동 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dongOptions.map(opt => (
-                      <SelectItem key={opt.code} value={opt.name}>{opt.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-      </Card>
+      <div className="mb-2 p-2 bg-white rounded-md border shadow-sm">
+        {/* 모바일/전체: 가로 스크롤 필터 */}
+        <div className="flex flex-row gap-2 overflow-x-auto pb-1">
+          <div className="min-w-[120px] flex-shrink-0">
+            <label className="text-xs font-medium mb-1 block text-gray-700">단지명</label>
+            <Select 
+              value={selectedAptName || ''} 
+              onValueChange={(value) => setSelectedAptName(value === 'all' ? null : value)}
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue placeholder="전체 단지" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 단지</SelectItem>
+                {availableAptNames.sort((a, b) => a.localeCompare(b, 'ko')).map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[110px] flex-shrink-0">
+            <label className="text-xs font-medium mb-1 block text-gray-700">면적</label>
+            <Select 
+              value={selectedArea?.toString() || ''} 
+              onValueChange={(value) => setSelectedArea(value === 'all' ? null : Number(value))}
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue placeholder="전체 면적" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 면적</SelectItem>
+                {availableAreas.map(area => (
+                  <SelectItem key={area} value={area.toString()}>
+                    {area}㎡
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[110px] flex-shrink-0">
+            <label className="text-xs font-medium mb-1 block text-gray-700">읍면동</label>
+            <Select value={dong} onValueChange={setDong}>
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue placeholder="읍면동 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {dongOptions.map(opt => (
+                  <SelectItem key={opt.code} value={opt.name}>{opt.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       {/* 모바일 정렬 버튼: 거래내역 위 */}
       <div className="lg:hidden flex flex-row flex-wrap gap-2 mb-4">
