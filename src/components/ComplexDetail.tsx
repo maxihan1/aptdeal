@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { MapPin, BarChart, ArrowLeft } from "lucide-react";
+import { MapPin, BarChart, ArrowLeft, Calendar } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 console.log('[ComplexDetail] 렌더링됨');
@@ -61,6 +61,22 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedArea, setSelectedArea] = React.useState("전체");
+
+  // 날짜 포맷팅 함수
+  function formatDateRange(startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const startYear = start.getFullYear();
+    const startMonth = start.getMonth() + 1;
+    const startDay = start.getDate();
+    
+    const endYear = end.getFullYear();
+    const endMonth = end.getMonth() + 1;
+    const endDay = end.getDate();
+    
+    return `${startYear}년 ${startMonth}월 ${startDay}일 ~ ${endYear}년 ${endMonth}월 ${endDay}일`;
+  }
 
   // 억/천만원 단위 포맷 함수 (천만원 단위까지)
   function formatKoreanPrice(price: number) {
@@ -477,6 +493,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
             <h2 className="text-xl md:text-2xl font-bold flex items-center gap-1 md:gap-2">
               {info.name}
             </h2>
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-600">
+              <Calendar className="w-3 h-3 text-gray-500" />
+              <span>조회기간 {formatDateRange(info.startDate, info.endDate)}</span>
+            </div>
           </div>
           <a
             href={`https://map.naver.com/v5/search/${encodeURIComponent(fullAddress)}`}
@@ -652,6 +672,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
           <h2 className="text-xl md:text-2xl font-bold flex items-center gap-1 md:gap-2">
             {info.name}
           </h2>
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-600">
+            <Calendar className="w-3 h-3 text-gray-500" />
+            <span>조회기간 {formatDateRange(info.startDate, info.endDate)}</span>
+          </div>
         </div>
         {/* 지도 아이콘 + 전체 주소 (클릭 시 새창) */}
         <a

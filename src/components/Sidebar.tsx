@@ -241,21 +241,6 @@ export default function Sidebar() {
 
   return (
     <aside className="mt-2 sm:mt-0 sm:static sm:w-72 bg-white border-r border-gray-200 flex flex-col min-h-screen p-4 gap-3">
-      {/* 모바일 뒤로가기 버튼 */}
-      <div className="block sm:hidden mb-2">
-        <button
-          onClick={() => {
-            const params = new URLSearchParams();
-            params.delete("sidebarOnly");
-            router.replace(`/?${params.toString()}`);
-          }}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          뒤로가기
-        </button>
-      </div>
-      
       {/* 검색 필터 영역 */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
