@@ -121,18 +121,42 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       const aptNameOptions = Array.from(new Set(dongFilteredOnlyDeals.map(d => d.aptName)));
 
       // **면적별 거래 데이터 생성**
-      const areaMap: { [area: string]: { date: string; price: number; rent?: number }[] } = {};
+      const areaMap: { [area: string]: { 
+        date: string; 
+        price: number; 
+        rent?: number;
+        contractType?: string;
+        cdealType?: string;
+        kaptCode?: string;
+        excluUseAr?: number;
+        dealAmount?: number;
+        floor?: number;
+      }[] } = {};
+      
       if (dealType === 'rent') {
         filteredDeals.forEach((deal) => {
           const area = Math.floor(deal.area) + "㎡";
           if (!areaMap[area]) areaMap[area] = [];
-          areaMap[area].push({ date: deal.date, price: deal.deposit ?? 0, rent: deal.rent ?? 0 });
+          areaMap[area].push({ 
+            date: deal.date, 
+            price: deal.deposit ?? 0, 
+            rent: deal.rent ?? 0,
+            contractType: String(deal.contractType || deal.rentType || ''),
+          });
         });
       } else {
         filteredDeals.forEach((deal) => {
           const area = Math.floor(deal.area) + "㎡";
           if (!areaMap[area]) areaMap[area] = [];
-          areaMap[area].push({ date: deal.date, price: deal.price });
+          areaMap[area].push({ 
+            date: deal.date, 
+            price: deal.price,
+            cdealType: String(deal.cdealType || ''),
+            kaptCode: String(deal.kaptCode || ''),
+            excluUseAr: Number(deal.excluUseAr || deal.area),
+            dealAmount: Number(deal.dealAmount || deal.price),
+            floor: typeof deal.floor === 'number' ? deal.floor : Number(deal.floor) || 0,
+          });
         });
       }
       const areaDealData = Object.entries(areaMap).map(([area, prices]) => ({ area, prices }));

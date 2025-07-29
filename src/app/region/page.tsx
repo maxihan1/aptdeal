@@ -21,6 +21,7 @@ interface Deal {
   date: string;
   aptName: string;
   floor: number;
+  aptDong?: string; // 동 정보 (빈값일 수 있음)
   buildYear: number;
   dealMonth: number;
   dealDay: number;
@@ -541,6 +542,7 @@ function RegionPage() {
                               {getSortIcon('area')}
                             </div>
                           </th>
+                          <th className="px-3 py-2 border text-center">동</th>
                           <th className="px-3 py-2 border text-center">층</th>
                           <th className="px-3 py-2 border text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('price')}>
                             <div className="flex items-center justify-center gap-1">
@@ -576,6 +578,7 @@ function RegionPage() {
                             <td className="px-3 py-2 border text-center">{deal.region}</td>
                             <td className="px-3 py-2 border text-center font-semibold">{deal.aptName}</td>
                             <td className="px-3 py-2 border text-center">{deal.area}㎡</td>
+                            <td className="px-3 py-2 border text-center">{'aptDong' in deal ? (deal.aptDong || '') : ''}</td>
                             <td className="px-3 py-2 border text-center">{'floor' in deal ? `${deal.floor}층` : ''}</td>
                             <td className="px-3 py-2 border text-center text-blue-600 font-bold">{'price' in deal ? formatPrice(deal.price ?? 0) : ''}</td>
                             <td className="px-3 py-2 border text-center">{deal.date}</td>
@@ -673,6 +676,9 @@ function RegionPage() {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-1 text-xs text-gray-600">
                         <div>면적: {deal.area}㎡</div>
+                        {searchParams.get('dealType') !== 'rent' && (
+                          <div>동: {'aptDong' in deal ? (deal.aptDong || '') : ''}</div>
+                        )}
                         <div>층: {'floor' in deal ? `${deal.floor}층` : ''}</div>
                         <div>계약일: {deal.date}</div>
                         <div>거래유형: {'tradeType' in deal ? deal.tradeType : ''}</div>

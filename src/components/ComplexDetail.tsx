@@ -37,7 +37,18 @@ export type ComplexInfo = {
 // 면적별 거래 데이터 타입
 export type AreaDealData = {
   area: string; // 예: "84㎡"
-  prices: { date: string; price: number; rent?: number }[]; // 라인차트용 (rent 필드 추가)
+  prices: { 
+    date: string; 
+    price: number; 
+    rent?: number;
+    aptDong?: string; // 동 정보 (빈값일 수 있음)
+    floor?: number; // 층 정보
+    cdealType?: string; // 계약해제 여부 (매매용)
+    contractType?: string; // 계약유형 (전월세용)
+    kaptCode?: string; // 아파트 코드 (매매용)
+    excluUseAr?: number; // 전용면적 (매매용)
+    dealAmount?: number; // 거래금액 (매매용)
+  }[]; // 라인차트용 (rent 필드 추가)
 };
 
 interface ComplexDetailProps {
@@ -63,23 +74,113 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return result.trim();
   }
 
+  // 취소 건을 필터링하는 함수
+  function filterCancelledDeals(prices: AreaDealData['prices'], isRent: boolean) {
+    if (isRent) {
+      // 전월세: contractType이 "해제"인 건 제외
+      return prices.filter(p => p.contractType !== "해제");
+    } else {
+      // 매매: 조건1과 조건2에 해당하는 건 제외
+      const cancelledKeys = new Set<string>();
+      
+      // 조건1: cdealType이 Y 또는 O인 건
+      prices.forEach(p => {
+        if (p.cdealType === 'Y' || p.cdealType === 'O') {
+          const key = `${p.kaptCode}_${p.floor}_${p.excluUseAr}_${p.dealAmount}`;
+          cancelledKeys.add(key);
+        }
+      });
+      
+      // 조건2: 검색기간 내 cdealType이 Y인 데이터가 존재하고 floor, excluUseAr, dealAmount가 동일한 건
+      prices.forEach(p => {
+        const key = `${p.kaptCode}_${p.floor}_${p.excluUseAr}_${p.dealAmount}`;
+        if (cancelledKeys.has(key)) {
+          // 해당 키와 동일한 모든 거래를 취소로 판단
+          prices.forEach(otherP => {
+            if (otherP.floor === p.floor && 
+                otherP.excluUseAr === p.excluUseAr && 
+                otherP.dealAmount === p.dealAmount) {
+              const otherKey = `${otherP.kaptCode}_${otherP.floor}_${otherP.excluUseAr}_${otherP.dealAmount}`;
+              cancelledKeys.add(otherKey);
+            }
+          });
+        }
+      });
+      
+      return prices.filter(p => {
+        const key = `${p.kaptCode}_${p.floor}_${p.excluUseAr}_${p.dealAmount}`;
+        return !cancelledKeys.has(key);
+      });
+    }
+  }
+
+  // 취소 건수를 계산하는 함수
+  function countCancelledDeals(prices: AreaDealData['prices'], isRent: boolean) {
+    if (isRent) {
+      // 전월세: contractType이 "해제"인 건 수
+      return prices.filter(p => p.contractType === "해제").length;
+    } else {
+      // 매매: 조건1과 조건2에 해당하는 건을 1건으로 계산
+      const cancelledKeys = new Set<string>();
+      
+
+      
+      // 조건1: cdealType이 Y 또는 O인 건
+      prices.forEach(p => {
+        if (p.cdealType === 'Y' || p.cdealType === 'O') {
+          const key = `${p.floor}_${p.excluUseAr}_${p.dealAmount}`;
+          cancelledKeys.add(key);
+
+        }
+      });
+      
+      // 조건2: 검색기간 내 cdealType이 Y인 데이터가 존재하고 floor, excluUseAr, dealAmount가 동일한 건
+      prices.forEach(p => {
+        const key = `${p.floor}_${p.excluUseAr}_${p.dealAmount}`;
+        if (cancelledKeys.has(key)) {
+          // 해당 키와 동일한 모든 거래를 취소로 판단
+          prices.forEach(otherP => {
+            if (otherP.floor === p.floor && 
+                otherP.excluUseAr === p.excluUseAr && 
+                otherP.dealAmount === p.dealAmount) {
+              const otherKey = `${otherP.floor}_${otherP.excluUseAr}_${otherP.dealAmount}`;
+              cancelledKeys.add(otherKey);
+
+            }
+          });
+        }
+      });
+      
+
+      return cancelledKeys.size;
+    }
+  }
+
   // x축 라벨: 모든 거래 날짜(YYYY-MM-DD)
   const allDates = React.useMemo(() => Array.from(
     new Set(areaDealData.flatMap((a) => a.prices.map((p) => p.date)))
   ).sort(), [areaDealData]);
 
+  // 취소 건을 제외한 데이터
+  const filteredAreaDealData = areaDealData.map(area => ({
+    ...area,
+    prices: filterCancelledDeals(area.prices, false) // 매매 데이터
+  }));
+  
+
+
   // 차트에 표시할 데이터(면적 선택)
-  const chartAreas = selectedArea === "전체" ? areaDealData : areaDealData.filter((a) => a.area === selectedArea);
+  const chartAreas = selectedArea === "전체" ? filteredAreaDealData : filteredAreaDealData.filter((a) => a.area === selectedArea);
 
   // 선택된 면적의 인덱스 찾기 (색상 일치를 위해)
-  const selectedAreaIndex = selectedArea !== "전체" ? areaDealData.findIndex((a) => a.area === selectedArea) : -1;
+  const selectedAreaIndex = selectedArea !== "전체" ? filteredAreaDealData.findIndex((a) => a.area === selectedArea) : -1;
 
-  // 전체 평균 가격: 모든 면적 데이터 합산
-  const allPrices = areaDealData.flatMap((a) => a.prices.map((p) => p.price));
+  // 전체 평균 가격: 모든 면적 데이터 합산 (취소 건 제외)
+  const allPrices = filteredAreaDealData.flatMap((a) => a.prices.map((p) => p.price));
   const overallAvg = allPrices.length ? Math.round(allPrices.reduce((a, b) => a + b, 0) / allPrices.length) : 0;
 
-  // 전체 평균 평당가 계산 (만원/평)
-  const allPricePerPyeong = areaDealData.flatMap((a) => {
+  // 전체 평균 평당가 계산 (만원/평) (취소 건 제외)
+  const allPricePerPyeong = filteredAreaDealData.flatMap((a) => {
     if (!a.prices.length || !a.area) return [];
     const areaNumber = parseFloat(a.area.replace('㎡', ''));
     if (isNaN(areaNumber) || areaNumber === 0) return [];
@@ -87,6 +188,14 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return a.prices.map((p) => p.price / pyeong); // '만원/평'
   });
   const avgPricePerPyeong = allPricePerPyeong.length ? Math.round(allPricePerPyeong.reduce((a, b) => a + b, 0) / allPricePerPyeong.length) : 0;
+
+  // 총 거래건수 (취소 건 제외)
+  const totalDeals = allPrices.length;
+
+  // 취소 건수 계산
+  const cancelledDealsCount = areaDealData.reduce((total, area) => {
+    return total + countCancelledDeals(area.prices, false);
+  }, 0);
 
   // 차트 데이터: 라인은 평균, 점은 모든 거래
   const chartData = {
@@ -165,7 +274,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return Math.round(avgPrice / pyeong); // '만원/평'
   }
   
-  const areaAvgList = areaDealData.map((area) => ({
+  const areaAvgList = filteredAreaDealData.map((area) => ({
     area: area.area,
     avg: getAreaAvgPrice(area),
     avgPerPyeong: getAreaAvgPricePerPyeong(area),
@@ -194,9 +303,11 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
 
   // 전세(보증금, 월세 0)만 필터링
   const isRent = dealType === 'rent';
+  
+
+  
   // 전월세 데이터에서 월세가 0인 전세 데이터만 필터링
   let jeonseAreaDealData = areaDealData;
-  let allDealsAreaDealData = areaDealData; // 총 거래건수용 (전세 + 월세)
   
   if (isRent) {
     // 전세만 필터링 (rent가 0 또는 undefined인 데이터만)
@@ -204,22 +315,27 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
       ...area,
       prices: area.prices.filter(p => p.price > 0 && (p.rent === 0 || p.rent === undefined)),
     })).filter(area => area.prices.length > 0);
-    
-    // 전체 거래 (전세 + 월세 모두 포함)
-    allDealsAreaDealData = areaDealData.map(area => ({
-      ...area,
-      prices: area.prices.filter(p => p.price > 0),
-    })).filter(area => area.prices.length > 0);
   }
 
-  // 전체 전세 보증금 평균
+  // 취소 건을 제외한 전월세 데이터
+  const filteredJeonseAreaDealData = jeonseAreaDealData.map(area => ({
+    ...area,
+    prices: filterCancelledDeals(area.prices, true) // 전월세 데이터
+  }));
+
+  // 전월세 취소 건수 계산
+  const jeonseCancelledDealsCount = jeonseAreaDealData.reduce((total, area) => {
+    return total + countCancelledDeals(area.prices, true);
+  }, 0);
+
+  // 전체 전세 보증금 평균 (취소 건 제외)
   const jeonseAllPrices = isRent
-    ? jeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.price))
-    : areaDealData.flatMap((a) => a.prices.map((p) => p.price));
+    ? filteredJeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.price))
+    : filteredAreaDealData.flatMap((a) => a.prices.map((p) => p.price));
   const jeonseOverallAvg = jeonseAllPrices.length ? Math.round(jeonseAllPrices.reduce((a, b) => a + b, 0) / jeonseAllPrices.length) : 0;
 
-  // 전체 전세 평당가 평균 (만원/평)
-  const jeonseAllPricePerPyeong = (isRent ? jeonseAreaDealData : areaDealData).flatMap((a) => {
+  // 전체 전세 평당가 평균 (만원/평) (취소 건 제외)
+  const jeonseAllPricePerPyeong = (isRent ? filteredJeonseAreaDealData : filteredAreaDealData).flatMap((a) => {
     if (!a.prices.length || !a.area) return [];
     const areaNumber = parseFloat(a.area.replace('㎡', ''));
     if (isNaN(areaNumber) || areaNumber === 0) return [];
@@ -228,13 +344,13 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
   });
   const jeonseAvgPricePerPyeong = jeonseAllPricePerPyeong.length ? Math.round(jeonseAllPricePerPyeong.reduce((a, b) => a + b, 0) / jeonseAllPricePerPyeong.length) : 0;
 
-  // 전세 거래건수 (월세 0인 거래만)
+  // 전세 거래건수 (월세 0인 거래만, 취소 건 제외)
   const jeonseTotalDeals = jeonseAllPrices.length;
   
-  // 전체 거래건수 (전세 + 월세 모두 포함)
+  // 전체 거래건수 (전세 + 월세 모두 포함, 취소 건 제외)
   const allTotalDeals = isRent 
-    ? allDealsAreaDealData.flatMap((a) => a.prices.map((p) => p.price)).length
-    : allPrices.length;
+    ? filteredJeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.price)).length
+    : totalDeals;
 
   // 면적별 평균 전세 보증금과 평단가
   function getJeonseAreaAvgPrice(areaData: AreaDealData): number {
@@ -252,7 +368,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return Math.round(avgPrice / pyeong); // '만원/평'
   }
   
-  const jeonseAreaAvgList = jeonseAreaDealData.map((area) => ({
+  const jeonseAreaAvgList = filteredJeonseAreaDealData.map((area) => ({
     area: area.area,
     avg: getJeonseAreaAvgPrice(area),
     avgPerPyeong: getJeonseAreaAvgPricePerPyeong(area),
@@ -261,12 +377,12 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
 
   // 차트 데이터: 전세(월세 0)만 사용
   const jeonseAllDates = React.useMemo(() => Array.from(
-    new Set(jeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.date)))
-  ).sort(), [jeonseAreaDealData]);
-  const jeonseChartAreas = selectedArea === "전체" ? jeonseAreaDealData : jeonseAreaDealData.filter((a) => a.area === selectedArea);
+    new Set(filteredJeonseAreaDealData.flatMap((a) => a.prices.map((p) => p.date)))
+  ).sort(), [filteredJeonseAreaDealData]);
+  const jeonseChartAreas = selectedArea === "전체" ? filteredJeonseAreaDealData : filteredJeonseAreaDealData.filter((a) => a.area === selectedArea);
   
   // 전월세에서 선택된 면적의 인덱스 찾기 (색상 일치를 위해)
-  const jeonseSelectedAreaIndex = selectedArea !== "전체" ? jeonseAreaDealData.findIndex((a) => a.area === selectedArea) : -1;
+  const jeonseSelectedAreaIndex = selectedArea !== "전체" ? filteredJeonseAreaDealData.findIndex((a) => a.area === selectedArea) : -1;
   
   const jeonseChartData = {
     labels: jeonseAllDates,
@@ -332,14 +448,16 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     },
   }), []);
 
-  // 진단용 콘솔 로그
+  // 진단용 콘솔 로그 (전월세일 때만)
   React.useEffect(() => {
-    console.log('[ComplexDetail] isRent:', isRent, 'dealType:', dealType);
-    console.log('[전월세] areaDealData', areaDealData);
-    console.log('[전월세] jeonseAreaDealData', jeonseAreaDealData);
-    console.log('[전월세] jeonseChartAreas', jeonseChartAreas);
-    console.log('[전월세] jeonseAllDates', jeonseAllDates);
-    console.log('[전월세] selectedArea', selectedArea);
+    if (isRent) {
+      console.log('[ComplexDetail] isRent:', isRent, 'dealType:', dealType);
+      console.log('[전월세] areaDealData', areaDealData);
+      console.log('[전월세] jeonseAreaDealData', jeonseAreaDealData);
+      console.log('[전월세] jeonseChartAreas', jeonseChartAreas);
+      console.log('[전월세] jeonseAllDates', jeonseAllDates);
+      console.log('[전월세] selectedArea', selectedArea);
+    }
   }, [isRent, areaDealData, jeonseAreaDealData, jeonseChartAreas, jeonseAllDates, selectedArea, dealType]);
 
   if (isRent) {
@@ -378,6 +496,9 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   <th className="py-3 px-1 font-semibold text-gray-700">평균 전세 보증금</th>
                   <th className="py-3 px-1 font-semibold text-gray-700">평당 평균 전세 보증금</th>
                   <th className="py-3 px-1 font-semibold text-gray-700">총 거래건수</th>
+                  {cancelledDealsCount > 0 && (
+                    <th className="py-3 px-1 font-semibold text-gray-700">취소건수</th>
+                  )}
                   {/* <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th> */}
                 </tr>
               </thead>
@@ -386,6 +507,9 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   <td className="py-3 px-1 text-center font-bold text-blue-700">{formatKoreanPrice(jeonseOverallAvg)}</td>
                   <td className="py-3 px-1 text-center font-bold text-orange-700">{jeonseAvgPricePerPyeong.toLocaleString()}만원/평</td>
                   <td className="py-3 px-1 text-center font-bold text-green-700">{(isRent ? allTotalDeals : jeonseTotalDeals).toLocaleString()}건</td>
+                  {cancelledDealsCount > 0 && (
+                    <td className="py-3 px-1 text-center font-bold text-red-600">취소 {(isRent ? jeonseCancelledDealsCount : cancelledDealsCount).toLocaleString()}건</td>
+                  )}
                   {/* <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td> */}
                 </tr>
               </tbody>
@@ -407,6 +531,9 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
               <BarChart className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-green-500" />
               <div className="text-[11px] md:text-xs text-gray-500 mb-0.5 md:mb-1">총 거래 건수</div>
               <div className="text-sm md:text-lg font-bold text-green-700">{(isRent ? allTotalDeals : jeonseTotalDeals).toLocaleString()}건</div>
+              {(isRent ? jeonseCancelledDealsCount : cancelledDealsCount) > 0 && (
+                <div className="text-[10px] md:text-xs font-bold text-red-600">취소 {(isRent ? jeonseCancelledDealsCount : cancelledDealsCount).toLocaleString()}건</div>
+              )}
             </div>
             {/* <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
               <Home className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-purple-500" />
@@ -545,6 +672,9 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <th className="py-3 px-1 font-semibold text-gray-700">평균거래가</th>
                 <th className="py-3 px-1 font-semibold text-gray-700">평단가</th>
                 <th className="py-3 px-1 font-semibold text-gray-700">총 거래건수</th>
+                {cancelledDealsCount > 0 && (
+                  <th className="py-3 px-1 font-semibold text-gray-700">취소건수</th>
+                )}
                 {/* <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th> */}
               </tr>
             </thead>
@@ -552,7 +682,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
               <tr>
                 <td className="py-3 px-1 text-center font-bold text-blue-700">{formatKoreanPrice(overallAvg)}</td>
                 <td className="py-3 px-1 text-center font-bold text-orange-700">{avgPricePerPyeong.toLocaleString()}만원/평</td>
-                <td className="py-3 px-1 text-center font-bold text-green-700">{info.totalDeals.toLocaleString()}건</td>
+                <td className="py-3 px-1 text-center font-bold text-green-700">{totalDeals.toLocaleString()}건</td>
+                {cancelledDealsCount > 0 && (
+                  <td className="py-3 px-1 text-center font-bold text-red-600">취소 {cancelledDealsCount.toLocaleString()}건</td>
+                )}
                 {/* <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td> */}
               </tr>
             </tbody>
@@ -576,7 +709,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
           <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
             <BarChart className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-green-500" />
             <div className="text-[11px] md:text-xs text-gray-500 mb-0.5 md:mb-1">총 거래 건수</div>
-            <div className="text-sm md:text-lg font-bold text-green-700">{info.totalDeals.toLocaleString()}건</div>
+            <div className="text-sm md:text-lg font-bold text-green-700">{totalDeals.toLocaleString()}건</div>
+            {cancelledDealsCount > 0 && (
+              <div className="text-[10px] md:text-xs font-bold text-red-600">취소 {cancelledDealsCount.toLocaleString()}건</div>
+            )}
           </div>
           {/* 총세대수 카드 */}
           {/* <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">

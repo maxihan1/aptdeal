@@ -257,6 +257,7 @@ app.prepare().then(() => {
                 deposit: Number((deal.deposit || deal.보증금액 || deal.rentGtn || '0').toString().replace(/,/g, '')),
                 rent: Number((deal.monthlyRent || deal.월세금액 || deal.rentFee || '0').toString().replace(/,/g, '')),
                 rentType: deal.contractType || deal.임대구분 || deal.rentGbn || '',
+                contractType: deal.contractType || deal.임대구분 || deal.rentGbn || '', // 취소 판단용
                 date: `${deal.dealYear || deal.년 || ''}-${String(deal.dealMonth || deal.월 || '').padStart(2, '0')}-${String(deal.dealDay || deal.일 || '').padStart(2, '0')}`,
                 aptName: deal.아파트 || deal.aptNm || '',
                 buildYear: deal.건축년도 || deal.buildYear || '',
@@ -277,6 +278,9 @@ app.prepare().then(() => {
               dealDay: deal.일 || deal.dealDay || '',
               tradeType: deal.거래유형 || deal.dealingGbn || deal.tradeType || '',
               cdealType: deal.계약해제 || deal.cdealType || '',
+              kaptCode: deal.kaptCode || deal.아파트코드 || '', // 취소 판단용
+              excluUseAr: Number(deal.전용면적 || deal.excluUseAr || 0), // 취소 판단용
+              dealAmount: Number((deal.거래금액 || deal.dealAmount || '0').toString().replace(/,/g, '')), // 취소 판단용
             })));
           }
           if (deals.length < 100) break;
