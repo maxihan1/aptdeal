@@ -18,6 +18,7 @@ interface Deal {
   price: number;
   date: string;
   aptName: string;
+  aptDong?: string; // 동 정보 추가
   floor: string | number;
   buildYear: string | number;
   dealMonth: string | number;
@@ -148,7 +149,16 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         filteredDeals.forEach((deal) => {
           const area = Math.floor(deal.area) + "㎡";
           if (!areaMap[area]) areaMap[area] = [];
-          areaMap[area].push({ 
+          const dealData: {
+            date: string;
+            price: number;
+            cdealType: string;
+            kaptCode: string;
+            excluUseAr: number;
+            dealAmount: number;
+            floor: number;
+            aptDong?: string;
+          } = { 
             date: deal.date, 
             price: deal.price,
             cdealType: String(deal.cdealType || ''),
@@ -156,7 +166,14 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             excluUseAr: Number(deal.excluUseAr || deal.area),
             dealAmount: Number(deal.dealAmount || deal.price),
             floor: typeof deal.floor === 'number' ? deal.floor : Number(deal.floor) || 0,
-          });
+          };
+          
+          // 매매 데이터에만 동 정보 추가
+          if (deal.aptDong) {
+            dealData.aptDong = String(deal.aptDong);
+          }
+          
+          areaMap[area].push(dealData);
         });
       }
       const areaDealData = Object.entries(areaMap).map(([area, prices]) => ({ area, prices }));

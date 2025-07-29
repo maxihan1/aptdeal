@@ -272,6 +272,7 @@ app.prepare().then(() => {
               price: Number((deal.거래금액 || deal.dealAmount || '0').toString().replace(/,/g, '')),
               date: `${deal.년 || deal.dealYear || ''}-${String(deal.월 || deal.dealMonth || '').padStart(2, '0')}-${String(deal.일 || deal.dealDay || '').padStart(2, '0')}`,
               aptName: deal.아파트 || deal.aptNm || '',
+              aptDong: deal.아파트동 || deal.aptDong || deal.dong || '', // 동 정보 추가
               floor: deal.층 || deal.floor || '',
               buildYear: deal.건축년도 || deal.buildYear || '',
               dealMonth: deal.월 || deal.dealMonth || '',
