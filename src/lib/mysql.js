@@ -1,25 +1,38 @@
 import mysql from 'mysql2/promise';
 
-// 환경 변수 검증
-if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD || !process.env.MYSQL_DATABASE) {
-  throw new Error('MySQL 환경 변수가 설정되지 않았습니다. .env 파일을 확인해주세요.');
-}
+// MySQL 연결 풀 변수
+let pool = null;
 
-// MySQL 연결 풀 생성
-const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST,
-  port: parseInt(process.env.MYSQL_PORT || '3306'),
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  charset: 'utf8mb4',
-});
+// 환경 변수 검증 및 연결 풀 생성
+try {
+  if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD || !process.env.MYSQL_DATABASE) {
+    console.warn('MySQL 환경 변수가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+    console.warn('MySQL 기능은 사용할 수 없습니다.');
+  } else {
+    // MySQL 연결 풀 생성
+    pool = mysql.createPool({
+      host: process.env.MYSQL_HOST,
+      port: parseInt(process.env.MYSQL_PORT || '3306'),
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      charset: 'utf8mb4',
+    });
+  }
+} catch (error) {
+  console.warn('MySQL 연결 설정 중 오류 발생:', error.message);
+}
 
 // 연결 테스트 함수
 export async function testConnection() {
+  if (!pool) {
+    console.warn('MySQL 연결이 설정되지 않았습니다.');
+    return false;
+  }
+  
   try {
     const connection = await pool.getConnection();
     console.log('MySQL 연결 성공!');
@@ -33,6 +46,10 @@ export async function testConnection() {
 
 // 쿼리 실행 함수
 export async function executeQuery(query, params) {
+  if (!pool) {
+    throw new Error('MySQL 연결이 설정되지 않았습니다.');
+  }
+  
   try {
     const [rows] = await pool.execute(query, params);
     return rows;
@@ -44,6 +61,10 @@ export async function executeQuery(query, params) {
 
 // 트랜잭션 실행 함수
 export async function executeTransaction(queries) {
+  if (!pool) {
+    throw new Error('MySQL 연결이 설정되지 않았습니다.');
+  }
+  
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

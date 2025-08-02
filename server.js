@@ -53,6 +53,17 @@ const lawdCdPath = path.join(__dirname, "LAWD_CD.txt");
 const lawdCdData = fs.readFileSync(lawdCdPath, "utf-8");
 const sidoSigunguDongMapping = {};
 
+// 행정구역명 매핑 (새로운 명칭 → 기존 명칭)
+const sidoMapping = {
+  '강원특별자치도': '강원도',
+  '전북특별자치도': '전라북도'
+};
+
+// 특별한 케이스 매핑 (시도-시군구 → 새로운 시도-시군구)
+const specialMapping = {
+  '대구광역시-군위군': '경상북도-군위군'
+};
+
 console.log('📄 [DATA] Parsing LAWD_CD data...');
 const lines = lawdCdData.split('\n');
 for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 건너뜀
@@ -68,13 +79,17 @@ for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 �
     let sido, sigungu, dong, key, si, gu;
     
     if (nameParts.length === 4) {
-      // 4개 부분: "경기도 용인시 기흥구 신갈동" 형태
+      // 4개 부분: "전북특별자치도 전주시 완산구 동" 형태
       [sido, si, gu, dong] = nameParts;
       sigungu = `${si} ${gu}`;
+      // 새로운 행정구역명을 기존 명칭으로 매핑
+      sido = sidoMapping[sido] || sido;
       key = `${sido}-${sigungu}`;
     } else if (nameParts.length === 3) {
-      // 3개 부분: "경기도 수원시 팔달동" 형태
+      // 3개 부분: "강원특별자치도 춘천시 동" 형태
       [sido, sigungu, dong] = nameParts;
+      // 새로운 행정구역명을 기존 명칭으로 매핑
+      sido = sidoMapping[sido] || sido;
       key = `${sido}-${sigungu}`;
     } else if (nameParts.length === 2) {
       // 2개 부분: "세종특별자치시 반곡동" 형태
@@ -86,13 +101,17 @@ for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 �
     // 동 이름이 있고, 구/군/시로 끝나지 않는 경우만 추가
     if (key && dong && dong.trim() && 
         !dong.endsWith('구') && !dong.endsWith('군') && !dong.endsWith('시')) {
-      if (!sidoSigunguDongMapping[key]) {
-        sidoSigunguDongMapping[key] = [];
+      
+      // 특별 매핑 적용
+      const mappedKey = specialMapping[key] || key;
+      
+      if (!sidoSigunguDongMapping[mappedKey]) {
+        sidoSigunguDongMapping[mappedKey] = [];
       }
       
       // 중복 제거
-      if (!sidoSigunguDongMapping[key].find(d => d.name === dong)) {
-        sidoSigunguDongMapping[key].push({
+      if (!sidoSigunguDongMapping[mappedKey].find(d => d.name === dong)) {
+        sidoSigunguDongMapping[mappedKey].push({
           code: dong,
           name: dong
         });
