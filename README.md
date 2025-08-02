@@ -35,12 +35,15 @@ npm run build
 `.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
 
 ```env
-# MySQL 설정 (Apppass)
-MYSQL_HOST=mf27af89599f7400796e2aee79f112315.apppaas.app
-MYSQL_PORT=30047
-MYSQL_USER=root
-MYSQL_PASSWORD=Qlxmtptkd!2
-MYSQL_DATABASE=aptdeal
+# MySQL 설정
+MYSQL_HOST=your_mysql_host_here
+MYSQL_PORT=3306
+MYSQL_USER=your_mysql_user_here
+MYSQL_PASSWORD=your_mysql_password_here
+MYSQL_DATABASE=your_database_name_here
+
+# API Keys
+SERVICE_KEY=your_service_key_here
 
 # Google Analytics (선택사항)
 NEXT_PUBLIC_GA_TRACKING_ID=your_ga_tracking_id
@@ -51,6 +54,11 @@ NEXT_PUBLIC_BASE_URL=https://aptdeal.kr
 # Google Search Console
 NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=google147b28c0e8d03660
 ```
+
+**⚠️ 보안 주의사항:**
+- 실제 데이터베이스 정보는 `.env.local` 파일에만 저장하세요
+- `.env.local` 파일은 절대 git에 커밋하지 마세요
+- 프로덕션 환경에서는 Vercel 대시보드에서 환경 변수를 설정하세요
 
 ## MySQL 데이터베이스 설정
 
@@ -125,7 +133,7 @@ src/
 │   ├── ui/               # ShadCN UI 컴포넌트
 │   └── Sidebar.tsx       # 사이드바 컴포넌트
 ├── lib/                  # 유틸리티 함수
-│   ├── supabase.ts       # Supabase 클라이언트
+│   ├── mysql.ts          # MySQL 연결
 │   └── gtag.ts           # Google Analytics
 └── types/                # TypeScript 타입 정의
 ```

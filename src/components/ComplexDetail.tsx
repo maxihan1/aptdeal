@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { MapPin, BarChart, ArrowLeft, Calendar } from "lucide-react";
+import { MapPin, BarChart, ArrowLeft, Calendar, Home } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 console.log('[ComplexDetail] 렌더링됨');
@@ -519,7 +519,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   {cancelledDealsCount > 0 && (
                     <th className="py-3 px-1 font-semibold text-gray-700">취소건수</th>
                   )}
-                  {/* <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th> */}
+                  <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th>
                 </tr>
               </thead>
               <tbody>
@@ -530,7 +530,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   {cancelledDealsCount > 0 && (
                     <td className="py-3 px-1 text-center font-bold text-red-600">취소 {(isRent ? jeonseCancelledDealsCount : cancelledDealsCount).toLocaleString()}건</td>
                   )}
-                  {/* <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td> */}
+                  <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td>
                 </tr>
               </tbody>
             </table>
@@ -699,7 +699,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 {cancelledDealsCount > 0 && (
                   <th className="py-3 px-1 font-semibold text-gray-700">취소건수</th>
                 )}
-                {/* <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th> */}
+                <th className="py-3 px-1 font-semibold text-gray-700">총세대수</th>
               </tr>
             </thead>
             <tbody>
@@ -710,7 +710,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 {cancelledDealsCount > 0 && (
                   <td className="py-3 px-1 text-center font-bold text-red-600">취소 {cancelledDealsCount.toLocaleString()}건</td>
                 )}
-                {/* <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td> */}
+                <td className="py-3 px-1 text-center font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</td>
               </tr>
             </tbody>
           </table>
@@ -739,11 +739,11 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
             )}
           </div>
           {/* 총세대수 카드 */}
-          {/* <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
+          <div className="flex-1 bg-white rounded-xl shadow-md border border-gray-200 p-2 md:p-5 flex flex-col items-center min-w-[80px] max-w-[100px] md:min-w-[140px] md:max-w-[160px]">
             <Home className="w-4 h-4 md:w-6 md:h-6 mb-1 md:mb-2 text-purple-500" />
             <div className="text-[11px] md:text-xs text-gray-500 mb-0.5 md:mb-1">총세대수</div>
             <div className="text-sm md:text-lg font-bold text-purple-700">{info.totalHouseholds.toLocaleString()}세대</div>
-          </div> */}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-2 md:px-2">

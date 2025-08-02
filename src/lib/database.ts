@@ -2,7 +2,7 @@ import { executeQuery } from './mysql';
 
 // 아파트 목록 조회
 export async function getAptList(regionCode?: string) {
-  let query = 'SELECT DISTINCT aptname FROM apt_deals WHERE aptname IS NOT NULL';
+  let query = 'SELECT DISTINCT kaptName FROM apt_list WHERE kaptName IS NOT NULL';
   const params: (string | number)[] = [];
   
   if (regionCode) {
@@ -10,7 +10,7 @@ export async function getAptList(regionCode?: string) {
     params.push(regionCode);
   }
   
-  query += ' ORDER BY aptname LIMIT 1000';
+  query += ' ORDER BY kaptName LIMIT 1000';
   
   const rows = await executeQuery(query, params);
   return rows as Record<string, unknown>[];
@@ -19,8 +19,8 @@ export async function getAptList(regionCode?: string) {
 // 아파트 실거래가 조회
 export async function getAptDeals(aptName: string, regionCode?: string) {
   let query = `
-    SELECT * FROM apt_deals 
-    WHERE aptname = ?
+    SELECT * FROM apt_deal_info 
+    WHERE kaptName = ?
   `;
   const params: (string | number)[] = [aptName];
   
@@ -38,10 +38,10 @@ export async function getAptDeals(aptName: string, regionCode?: string) {
 // 지역별 아파트 목록 조회
 export async function getAptsByRegion(regionCode: string) {
   const query = `
-    SELECT DISTINCT aptname, COUNT(*) as dealCount 
-    FROM apt_deals 
+    SELECT DISTINCT kaptName, COUNT(*) as dealCount 
+    FROM apt_deal_info 
     WHERE regionCode = ? 
-    GROUP BY aptname 
+    GROUP BY kaptName 
     ORDER BY dealCount DESC
   `;
   
@@ -52,8 +52,8 @@ export async function getAptsByRegion(regionCode: string) {
 // 아파트 전월세 조회
 export async function getAptRents(aptName: string, regionCode?: string) {
   let query = `
-    SELECT * FROM apt_rents 
-    WHERE aptname = ?
+    SELECT * FROM apt_rent_info 
+    WHERE kaptName = ?
   `;
   const params: (string | number)[] = [aptName];
   
@@ -70,7 +70,7 @@ export async function getAptRents(aptName: string, regionCode?: string) {
 
 // 아파트 기본 정보 조회
 export async function getAptInfo(kaptCode: string) {
-  const query = 'SELECT * FROM apt WHERE kaptCode = ?';
+  const query = 'SELECT * FROM apt_basis_info WHERE kaptCode = ?';
   const rows = await executeQuery(query, [kaptCode]);
   return rows as Record<string, unknown>[];
 }
@@ -83,8 +83,8 @@ export async function getRegionStats(regionCode: string) {
       AVG(price) as avgPrice,
       MIN(price) as minPrice,
       MAX(price) as maxPrice,
-      COUNT(DISTINCT aptname) as aptCount
-    FROM apt_deals 
+      COUNT(DISTINCT kaptName) as aptCount
+    FROM apt_deal_info 
     WHERE regionCode = ?
   `;
   
@@ -102,8 +102,8 @@ export async function getAptStats(aptName: string, regionCode?: string) {
       MAX(price) as maxPrice,
       MIN(dealDate) as firstDeal,
       MAX(dealDate) as lastDeal
-    FROM apt_deals 
-    WHERE aptname = ?
+    FROM apt_deal_info 
+    WHERE kaptName = ?
   `;
   const params: (string | number)[] = [aptName];
   

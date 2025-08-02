@@ -16,7 +16,7 @@ async function getAptListForSitemap(): Promise<string[]> {
     // 중복 제거 및 필터링
     const uniqueAptNames = [...new Set(
       aptList
-        .map(item => (item as Record<string, unknown>).aptname as string)
+        .map(item => (item as Record<string, unknown>).kaptName as string)
         .filter(Boolean)
         .filter(name => typeof name === 'string' && name.trim().length > 0)
     )]

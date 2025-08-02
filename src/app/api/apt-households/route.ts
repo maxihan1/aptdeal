@@ -16,24 +16,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 아파트 세대수 정보 조회
+    // 아파트 세대수 정보 조회 (JOIN을 이용한 효율적 조회)
     const query = `
       SELECT 
-        kaptCode,
-        kaptName,
-        totalHouseholds,
-        totalParking,
-        constructionYear,
-        address
-      FROM apt_basis_info 
-      WHERE kaptName = ? 
-      AND address LIKE ?
+        b.kaptCode,
+        b.kaptName,
+        b.kaptdaCnt as totalHouseholds,
+        b.kaptDongCnt as totalParking,
+        b.kaptUsedate as constructionYear,
+        b.kaptAddr as address
+      FROM apt_list a
+      JOIN apt_basis_info b ON a.kaptCode = b.kaptCode
+      WHERE a.as1 = ? AND a.as2 = ? AND a.as3 = ? AND a.kaptName = ?
       LIMIT 1
     `;
-
-    const addressPattern = `%${sido}%${sigungu}%${dong}%`;
     
-    const result = await executeQuery(query, [aptName, addressPattern]);
+    const result = await executeQuery(query, [sido, sigungu, dong, aptName]);
 
     // result가 배열인지 확인하고 길이 체크
     if (!result || !Array.isArray(result) || result.length === 0) {

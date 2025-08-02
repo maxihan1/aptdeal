@@ -1,12 +1,12 @@
 // ES 모듈 방식으로 전체 변환
 import express from 'express';
 import next from 'next';
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
+import { executeQuery } from './src/lib/mysql.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,8 +18,8 @@ console.log('🔧 [STARTUP] NODE_ENV:', process.env.NODE_ENV);
 dotenv.config();
 
 console.log('🔐 [STARTUP] Environment variables loaded');
-console.log('🗄️  [STARTUP] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET');
-console.log('🔑 [STARTUP] Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+console.log('🗄️  [STARTUP] MySQL Host:', process.env.MYSQL_HOST ? 'SET' : 'NOT SET');
+console.log('🔑 [STARTUP] MySQL User:', process.env.MYSQL_USER ? 'SET' : 'NOT SET');
 console.log('🌐 [STARTUP] API URL:', process.env.NEXT_PUBLIC_API_URL || 'NOT SET');
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -28,10 +28,7 @@ console.log('⚙️  [STARTUP] Development mode:', dev);
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// Supabase 클라이언트 설정
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// MySQL 연결 설정 완료 (mysql.ts에서 관리)
 
 // 공공데이터 API 키
 const SERVICE_KEY = process.env.SERVICE_KEY || "PofsBo9KhzreP4I5ULYO0sqoysrTnQGpozz8JfdTSltOOYpJALPKFhZncnaL/bD8hsFzbNxSWZlbBhowKedMEw==";
@@ -367,22 +364,22 @@ app.prepare().then(() => {
       return res.status(400).json({ error: '필수 파라미터 누락' });
     }
     try {
-      const { data, error } = await supabase
-        .from('apt')
-        .select('kaptdacnt')
-        .eq('as1', sido)
-        .eq('as2', sigungu)
-        .eq('as3', dong)
-        .eq('kaptname', aptName)
-        .limit(1)
-        .single();
-      if (error) {
-        console.error('[apt-households] supabase error:', error);
-        return res.status(500).json({ error: error.message });
+      const query = `
+        SELECT b.kaptdaCnt 
+        FROM apt_list a
+        JOIN apt_basis_info b ON a.kaptCode = b.kaptCode
+        WHERE a.as1 = ? AND a.as2 = ? AND a.as3 = ? AND a.kaptName = ? 
+        LIMIT 1
+      `;
+      const rows = await executeQuery(query, [sido, sigungu, dong, aptName]);
+      
+      if (rows && rows.length > 0) {
+        res.json({ kaptdaCnt: Number(rows[0].kaptdaCnt) });
+      } else {
+        res.json({ kaptdaCnt: null });
       }
-      res.json({ kaptdaCnt: data ? Number(data.kaptdacnt) : null });
     } catch (e) {
-      console.error('[apt-households] catch error:', e);
+      console.error('[apt-households] MySQL error:', e);
       res.status(500).json({ error: e.message });
     }
   });

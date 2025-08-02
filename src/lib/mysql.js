@@ -32,7 +32,7 @@ export async function testConnection() {
 }
 
 // 쿼리 실행 함수
-export async function executeQuery(query: string, params?: (string | number)[]) {
+export async function executeQuery(query, params) {
   try {
     const [rows] = await pool.execute(query, params);
     return rows;
@@ -43,7 +43,7 @@ export async function executeQuery(query: string, params?: (string | number)[]) 
 }
 
 // 트랜잭션 실행 함수
-export async function executeTransaction(queries: { query: string; params?: (string | number)[] }[]) {
+export async function executeTransaction(queries) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
