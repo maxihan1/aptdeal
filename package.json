@@ -12,7 +12,10 @@
     "postinstall": "npm run build",
     "mysql:test": "node scripts/testMySQLConnection.js",
     "mysql:setup": "node scripts/setupMySQL.js",
-    "meta:check": "node scripts/checkMetaTags.js"
+    "meta:check": "node scripts/checkMetaTags.js",
+    "fetch:missing": "node fetch_missing_data_v2.js",
+    "fetch:analyze": "node fetch_missing_data_v2.js --analyze-only",
+    "data:zero-deal": "node scripts/check_zero_data_apt_deal_2015_2025.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
