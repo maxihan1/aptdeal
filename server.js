@@ -219,6 +219,17 @@ app.prepare().then(() => {
     return result;
   }
 
+  // 날짜 필터링 함수
+  function filterDealsByDate(deals, startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    return deals.filter(deal => {
+      const dealDate = new Date(deal.date);
+      return dealDate >= start && dealDate <= end;
+    });
+  }
+
   // 실거래가 API 연동
   server.get("/api/deals", async (req, res) => {
     const { sido, sigungu, dong, startDate, endDate, dealType } = req.query;
@@ -309,8 +320,11 @@ app.prepare().then(() => {
         acc[cur.id] = cur;
         return acc;
       }, {}));
-      console.log(`[가공된 deals] 총 ${uniqueDeals.length}건, 샘플:`, uniqueDeals[0]);
-      res.json(uniqueDeals);
+      
+      // 날짜 필터링 적용
+      const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
+      console.log(`[가공된 deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건, 샘플:`, filteredDeals[0]);
+      res.json(filteredDeals);
     } catch (e) {
       res.status(500).json({ error: "API 호출 실패", detail: e.message });
     }
@@ -369,7 +383,11 @@ app.prepare().then(() => {
         acc[cur.id] = cur;
         return acc;
       }, {}));
-      res.json(uniqueDeals);
+      
+      // 날짜 필터링 적용
+      const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
+      console.log(`[가공된 rent deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건`);
+      res.json(filteredDeals);
     } catch (e) {
       res.status(500).json({ error: "API 호출 실패", detail: e.message });
     }
