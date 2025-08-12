@@ -38,14 +38,14 @@ export default function Sidebar() {
   const [sido, setSido] = useState<string>("");
   const [sigungu, setSigungu] = useState<string>("");
   const [dong, setDong] = useState<string>("");
-  // 최근 한 달 기본 날짜 설정
+  // 최근 3개월 기본 날짜 설정
   const getDefaultDates = () => {
     const today = new Date();
-    const oneMonthAgo = new Date(today);
-    oneMonthAgo.setMonth(today.getMonth() - 1);
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(today.getMonth() - 3);
     
     return {
-      start: oneMonthAgo.toISOString().split('T')[0],
+      start: threeMonthsAgo.toISOString().split('T')[0],
       end: today.toISOString().split('T')[0]
     };
   };
