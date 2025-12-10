@@ -22,8 +22,8 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
-  // 빌드 출력 최적화
-  output: 'standalone',
+  // 빌드 출력 - standalone 제거 (기존 배포 방식과 호환되지 않을 수 있음)
+  // output: 'standalone',
 
   // TypeScript/ESLint 병렬 처리
   typescript: {
