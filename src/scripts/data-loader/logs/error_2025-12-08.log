@@ -1,0 +1,206 @@
+[2025-12-08T07:14:29.243Z]    검증 실패: 서울특별시 강남구 - API 에러 (000): OK
+[2025-12-08T07:14:29.835Z]    검증 실패: 서울특별시 강동구 - API 에러 (000): OK
+[2025-12-08T07:14:30.089Z]    검증 실패: 서울특별시 강북구 - API 에러 (000): OK
+[2025-12-08T07:14:30.834Z]    검증 실패: 서울특별시 강서구 - API 에러 (000): OK
+[2025-12-08T07:14:31.080Z]    검증 실패: 서울특별시 관악구 - API 에러 (000): OK
+[2025-12-08T07:14:31.786Z]    검증 실패: 서울특별시 광진구 - API 에러 (000): OK
+[2025-12-08T07:14:32.046Z]    검증 실패: 서울특별시 구로구 - API 에러 (000): OK
+[2025-12-08T07:14:32.288Z]    검증 실패: 서울특별시 금천구 - API 에러 (000): OK
+[2025-12-08T07:14:32.539Z]    검증 실패: 서울특별시 노원구 - API 에러 (000): OK
+[2025-12-08T07:14:32.797Z]    검증 실패: 서울특별시 도봉구 - API 에러 (000): OK
+[2025-12-08T07:14:33.048Z]    검증 실패: 서울특별시 동대문구 - API 에러 (000): OK
+[2025-12-08T07:14:34.233Z]    검증 실패: 서울특별시 동작구 - API 에러 (000): OK
+[2025-12-08T07:14:34.540Z]    검증 실패: 서울특별시 마포구 - API 에러 (000): OK
+[2025-12-08T07:14:34.821Z]    검증 실패: 서울특별시 서대문구 - API 에러 (000): OK
+[2025-12-08T07:14:36.265Z]    검증 실패: 서울특별시 서초구 - API 에러 (000): OK
+[2025-12-08T07:14:36.507Z]    검증 실패: 서울특별시 성동구 - API 에러 (000): OK
+[2025-12-08T07:14:36.781Z]    검증 실패: 서울특별시 성북구 - API 에러 (000): OK
+[2025-12-08T07:14:37.665Z]    검증 실패: 서울특별시 송파구 - API 에러 (000): OK
+[2025-12-08T07:14:38.220Z]    검증 실패: 서울특별시 양천구 - API 에러 (000): OK
+[2025-12-08T07:14:38.471Z]    검증 실패: 서울특별시 영등포구 - API 에러 (000): OK
+[2025-12-08T07:14:38.731Z]    검증 실패: 서울특별시 용산구 - API 에러 (000): OK
+[2025-12-08T07:14:39.057Z]    검증 실패: 서울특별시 은평구 - API 에러 (000): OK
+[2025-12-08T07:14:39.317Z]    검증 실패: 서울특별시 종로구 - API 에러 (000): OK
+[2025-12-08T07:14:39.560Z]    검증 실패: 서울특별시 중구 - API 에러 (000): OK
+[2025-12-08T07:14:40.733Z]    검증 실패: 서울특별시 중랑구 - API 에러 (000): OK
+[2025-12-08T07:14:40.984Z]    검증 실패: 경기도 가평군 - API 에러 (000): OK
+[2025-12-08T07:14:41.529Z]    검증 실패: 경기도 고양시 덕양구 - API 에러 (000): OK
+[2025-12-08T07:14:41.882Z]    검증 실패: 경기도 고양시 일산동구 - API 에러 (000): OK
+[2025-12-08T07:14:42.618Z]    검증 실패: 경기도 고양시 일산서구 - API 에러 (000): OK
+[2025-12-08T07:14:42.871Z]    검증 실패: 경기도 부천시 소사구  - API 에러 (000): OK
+[2025-12-08T07:14:43.118Z]    검증 실패: 경기도 부천시 오정구  - API 에러 (000): OK
+[2025-12-08T07:14:44.582Z]    검증 실패: 경기도 부천시 원미구  - API 에러 (000): OK
+[2025-12-08T07:14:44.843Z]    검증 실패: 경기도 성남시 분당구 - API 에러 (000): OK
+[2025-12-08T07:15:15.537Z]    검증 실패: 서울특별시 강남구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:15.874Z]    검증 실패: 서울특별시 강동구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:16.147Z]    검증 실패: 서울특별시 강북구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:16.475Z]    검증 실패: 서울특별시 강서구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:16.772Z]    검증 실패: 서울특별시 관악구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:17.426Z]    검증 실패: 서울특별시 광진구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:17.750Z]    검증 실패: 서울특별시 구로구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:18.079Z]    검증 실패: 서울특별시 금천구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:18.786Z]    검증 실패: 서울특별시 노원구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:19.085Z]    검증 실패: 서울특별시 도봉구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:19.668Z]    검증 실패: 서울특별시 동대문구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:19.976Z]    검증 실패: 서울특별시 동작구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:20.285Z]    검증 실패: 서울특별시 마포구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:20.577Z]    검증 실패: 서울특별시 서대문구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:20.888Z]    검증 실패: 서울특별시 서초구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:21.153Z]    검증 실패: 서울특별시 성동구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:21.656Z]    검증 실패: 서울특별시 성북구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:22.311Z]    검증 실패: 서울특별시 송파구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:22.675Z]    검증 실패: 서울특별시 양천구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:23.266Z]    검증 실패: 서울특별시 영등포구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:23.589Z]    검증 실패: 서울특별시 용산구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:23.928Z]    검증 실패: 서울특별시 은평구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:24.349Z]    검증 실패: 서울특별시 종로구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:24.674Z]    검증 실패: 서울특별시 중구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:25.336Z]    검증 실패: 서울특별시 중랑구 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:15:25.624Z]    검증 실패: 경기도 가평군 - Unknown column 'region_code' in 'where clause'
+[2025-12-08T07:39:54.576Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:44:02.353Z]    검증 실패: 서울특별시 성북구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:02.353Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:02.908Z]    검증 실패: 서울특별시 송파구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:03.143Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:03.346Z]    검증 실패: 서울특별시 양천구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:03.736Z]    검증 실패: 서울특별시 영등포구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:04.081Z]    검증 실패: 서울특별시 용산구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:04.283Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:04.475Z]    검증 실패: 서울특별시 은평구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:04.836Z]    검증 실패: 서울특별시 종로구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:04.994Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:05.219Z]    검증 실패: 서울특별시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:05.779Z]    검증 실패: 서울특별시 중랑구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:05.786Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:06.077Z]    검증 실패: 경기도 가평군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:06.116Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:06.444Z]    검증 실패: 경기도 고양시 덕양구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:06.874Z]    검증 실패: 경기도 고양시 일산동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:07.286Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:07.291Z]    검증 실패: 경기도 고양시 일산서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:07.693Z]    검증 실패: 경기도 부천시 소사구  - Connection lost: The server closed the connection.
+[2025-12-08T07:44:07.946Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:08.124Z]    검증 실패: 경기도 부천시 오정구  - Connection lost: The server closed the connection.
+[2025-12-08T07:44:08.579Z]    검증 실패: 경기도 부천시 원미구  - Connection lost: The server closed the connection.
+[2025-12-08T07:44:08.928Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:09.283Z]    검증 실패: 경기도 성남시 분당구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:09.596Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:10.174Z]    검증 실패: 경기도 성남시 수정구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:10.457Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:10.532Z]    검증 실패: 경기도 성남시 중원구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:11.352Z]    검증 실패: 경기도 수원시 권선구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:11.491Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:11.744Z]    검증 실패: 경기도 수원시 영통구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:11.826Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:12.086Z]    검증 실패: 경기도 수원시 장안구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:12.343Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:12.543Z]    검증 실패: 경기도 수원시 팔달구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:12.911Z]    검증 실패: 경기도 안산시 단원구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:13.271Z]    검증 실패: 경기도 안산시 상록구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:13.680Z]    검증 실패: 경기도 안양시 동안구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:14.059Z]    검증 실패: 경기도 안양시 만안구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:14.229Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:14.422Z]    검증 실패: 경기도 양평군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:14.793Z]    검증 실패: 경기도 연천군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:15.230Z]    검증 실패: 경기도 용인시 기흥구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:15.726Z]    검증 실패: 경기도 용인시 수지구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:15.794Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:16.412Z]    검증 실패: 경기도 용인시 처인구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:16.832Z]    검증 실패: 부산광역시 강서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:17.177Z]    검증 실패: 부산광역시 금정구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:17.444Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:17.629Z]    검증 실패: 부산광역시 기장군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:18.883Z]    검증 실패: 부산광역시 남구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:18.924Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:19.172Z]    검증 실패: 부산광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:19.571Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:19.571Z]    검증 실패: 부산광역시 동래구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:19.971Z]    검증 실패: 부산광역시 부산진구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:20.320Z]    검증 실패: 부산광역시 북구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:21.127Z]    검증 실패: 부산광역시 사상구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:21.169Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:21.540Z]    검증 실패: 부산광역시 사하구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:21.852Z]    검증 실패: 부산광역시 서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:22.252Z]    검증 실패: 부산광역시 수영구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:22.670Z]    검증 실패: 부산광역시 연제구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:23.036Z]    검증 실패: 부산광역시 영도구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:23.360Z]    검증 실패: 부산광역시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:23.512Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:23.754Z]    검증 실패: 부산광역시 해운대구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:24.568Z]    검증 실패: 대구광역시 군위군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:24.830Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:25.508Z]    검증 실패: 대구광역시 남구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:25.882Z]    검증 실패: 대구광역시 달서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:26.162Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:26.435Z]    검증 실패: 대구광역시 달성군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:26.801Z]    검증 실패: 대구광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:27.657Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:27.657Z]    검증 실패: 대구광역시 북구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:27.975Z]    검증 실패: 대구광역시 서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:28.581Z]    검증 실패: 대구광역시 수성구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:28.902Z]    검증 실패: 대구광역시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:29.236Z]    검증 실패: 인천광역시 강화군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:29.848Z]    검증 실패: 인천광역시 계양구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:30.246Z]    검증 실패: 인천광역시 남동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:30.630Z]    검증 실패: 인천광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:30.829Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:32.512Z]    검증 실패: 인천광역시 미추홀구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:33.519Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:33.533Z]    검증 실패: 인천광역시 부평구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:33.955Z]    검증 실패: 인천광역시 서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:34.448Z]    검증 실패: 인천광역시 연수구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:34.520Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:34.775Z]    검증 실패: 인천광역시 옹진군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:35.157Z]    검증 실패: 인천광역시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:35.229Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:35.592Z]    검증 실패: 광주광역시 광산구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:36.603Z]    검증 실패: 광주광역시 남구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:36.621Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:36.935Z]    검증 실패: 광주광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:37.569Z]    검증 실패: 광주광역시 북구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:38.003Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:38.660Z]    검증 실패: 광주광역시 서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:39.008Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:39.023Z]    검증 실패: 대전광역시 대덕구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:39.623Z]    검증 실패: 대전광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:39.654Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:40.084Z]    검증 실패: 대전광역시 서구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:40.512Z]    검증 실패: 대전광역시 유성구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:40.860Z]    검증 실패: 대전광역시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:41.218Z]    검증 실패: 울산광역시 남구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:41.654Z]    검증 실패: 울산광역시 동구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:42.034Z]    검증 실패: 울산광역시 북구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:42.283Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T07:44:42.358Z]    검증 실패: 울산광역시 울주군 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:42.704Z]    검증 실패: 울산광역시 중구 - Connection lost: The server closed the connection.
+[2025-12-08T07:44:43.005Z]    검증 실패: 충청북도 괴산군 - Connection lost: The server closed the connection.
+[2025-12-08T07:46:20.943Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:48:16.658Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:48:17.366Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:48:23.426Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:48:35.320Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:48:42.788Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:49:07.803Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:49:13.161Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:50:10.052Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:50:32.192Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:50:49.746Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:50:53.634Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:51:21.163Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:51:25.848Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T07:51:49.293Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:49:17.600Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:49:41.580Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:53:14.918Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:53:40.040Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:54:02.808Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:56:13.301Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:56:48.437Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:57:22.147Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:57:27.277Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-08T23:59:52.722Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T23:59:53.557Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T23:59:55.105Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T23:59:56.411Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T23:59:58.167Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-08T23:59:59.054Z] 복구 실패: Connection lost: The server closed the connection.

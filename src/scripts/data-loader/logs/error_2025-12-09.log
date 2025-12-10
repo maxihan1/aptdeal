@@ -1,0 +1,35 @@
+[2025-12-09T00:00:00.746Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:05.152Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:07.711Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:10.801Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:14.416Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:17.357Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:19.654Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:21.526Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:24.430Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:27.629Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:00:30.856Z] 복구 실패: Connection lost: The server closed the connection.
+[2025-12-09T00:01:50.329Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:02:00.803Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:02:06.719Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:02:51.158Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:02:58.014Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:03:03.832Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:03:07.951Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:03:22.611Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:03:37.236Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:04:08.802Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:04:18.030Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:04:21.521Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:04:45.971Z] 복구 실패: Conversion from collation utf8mb4_general_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:05:47.542Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:05:58.793Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:06:04.013Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:06:09.202Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:05.101Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:09.720Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:13.038Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:19.785Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:26.494Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:30.072Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter
+[2025-12-09T00:07:40.829Z] 복구 실패: Conversion from collation utf8mb4_unicode_ci into latin1_swedish_ci impossible for parameter

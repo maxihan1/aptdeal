@@ -42,14 +42,20 @@ function normalizeName(name: string) {
 function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> }) {
   // Next.js 최신 버전 대응: params는 Promise이므로 React.use()로 언래핑
   const { aptName } = React.use(params);
+  const today = new Date();
+  const threeMonthsAgo = new Date(today);
+  threeMonthsAgo.setMonth(today.getMonth() - 3);
+
   const decodedAptName = decodeURIComponent(aptName ?? "신봉마을동일하이빌3단지");
   const searchParams = useSearchParams();
   const region = searchParams.get("region") ?? "";
   const sido = searchParams.get("sido") ?? "경기도";
   const sigungu = searchParams.get("sigungu") ?? "";
   const dong = searchParams.get("dong") ?? "";
-  const startDate = searchParams.get("startDate") ?? "2023-01-01";
-  const endDate = searchParams.get("endDate") ?? "2023-12-31";
+
+  // 빈 문자열("")이 들어올 경우를 대비해 || 연산자 사용
+  const startDate = searchParams.get("startDate") || threeMonthsAgo.toISOString().split('T')[0];
+  const endDate = searchParams.get("endDate") || today.toISOString().split('T')[0];
   const dealType = searchParams.get("dealType") ?? "trade";
 
   const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}`;
@@ -67,12 +73,13 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         return;
       }
       setLoading(true);
-      // 1. API 호출
+      // 1. API 호출 (전월세/매매에 따라 다른 API)
+      const apiPath = dealType === 'rent' ? '/api/rent' : '/api/deals';
       const res = await fetch(
-        `/api/deals?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&dealType=${dealType}`
+        `${apiPath}?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}`
       );
       const deals = await res.json();
-      console.log('API fetch 후 deals.length:', deals.length);
+      console.log('API fetch 후 deals.length:', deals?.length);
       // 2. 캐싱
       dealCache[cacheKey] = deals;
       console.log('processDeals 호출 전');
@@ -122,25 +129,27 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       const aptNameOptions = Array.from(new Set(dongFilteredOnlyDeals.map(d => d.aptName)));
 
       // **면적별 거래 데이터 생성**
-      const areaMap: { [area: string]: { 
-        date: string; 
-        price: number; 
-        rent?: number;
-        contractType?: string;
-        cdealType?: string;
-        kaptCode?: string;
-        excluUseAr?: number;
-        dealAmount?: number;
-        floor?: number;
-      }[] } = {};
-      
+      const areaMap: {
+        [area: string]: {
+          date: string;
+          price: number;
+          rent?: number;
+          contractType?: string;
+          cdealType?: string;
+          kaptCode?: string;
+          excluUseAr?: number;
+          dealAmount?: number;
+          floor?: number;
+        }[]
+      } = {};
+
       if (dealType === 'rent') {
         filteredDeals.forEach((deal) => {
           const area = Math.floor(deal.area) + "㎡";
           if (!areaMap[area]) areaMap[area] = [];
-          areaMap[area].push({ 
-            date: deal.date, 
-            price: deal.deposit ?? 0, 
+          areaMap[area].push({
+            date: deal.date,
+            price: deal.deposit ?? 0,
             rent: deal.rent ?? 0,
             contractType: String(deal.contractType || deal.rentType || ''),
           });
@@ -158,8 +167,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             dealAmount: number;
             floor: number;
             aptDong?: string;
-          } = { 
-            date: deal.date, 
+          } = {
+            date: deal.date,
             price: deal.price,
             cdealType: String(deal.cdealType || ''),
             kaptCode: String(deal.kaptCode || ''),
@@ -167,12 +176,12 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             dealAmount: Number(deal.dealAmount || deal.price),
             floor: typeof deal.floor === 'number' ? deal.floor : Number(deal.floor) || 0,
           };
-          
+
           // 매매 데이터에만 동 정보 추가
           if (deal.aptDong) {
             dealData.aptDong = String(deal.aptDong);
           }
-          
+
           areaMap[area].push(dealData);
         });
       }
@@ -180,26 +189,46 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       setAreaDealData(areaDealData);
 
       // **info 객체에 옵션 포함**
-      // 총 세대수 API 호출
-      let totalHouseholds = 0;
+      // 단지 상세 정보 호출
+      let detailedInfo: any = {};
       try {
-        const res = await fetch(`/api/apt-households?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&aptName=${encodeURIComponent(decodedAptName)}`);
-        const data = await res.json();
-        totalHouseholds = data.kaptdaCnt || 0;
-      } catch {
-        totalHouseholds = 0;
+        const jibun = filteredDeals[0]?.address || '';
+        const res = await fetch(`/api/complex/detail?aptName=${encodeURIComponent(decodedAptName)}&region=${encodeURIComponent(region)}&jibun=${encodeURIComponent(jibun)}`);
+        if (res.ok) {
+          detailedInfo = await res.json();
+        }
+      } catch (e) {
+        console.error("Failed to fetch complex detail", e);
       }
+
       setInfo({
         name: decodedAptName,
         address: filteredDeals[0]?.address || '',
         region: filteredDeals[0]?.region || '',
         avgPrice: "",
         totalDeals: filteredDeals.length,
-        totalHouseholds,
+        totalHouseholds: detailedInfo.kaptdaCnt || 0,
         startDate,
         endDate,
         areaOptions,
         aptNameOptions,
+
+        // Basic Info
+        kaptDongCnt: detailedInfo.kaptDongCnt,
+        kaptUsedate: detailedInfo.kaptUsedate,
+        kaptBcompany: detailedInfo.kaptBcompany,
+        codeHeatNm: detailedInfo.codeHeatNm,
+        codeHallNm: detailedInfo.codeHallNm,
+        kaptdEcntp: detailedInfo.kaptdEcntp,
+
+        // Living Info
+        subwayLine: detailedInfo.subwayLine,
+        subwayStation: detailedInfo.subwayStation,
+        kaptdWtimebus: detailedInfo.kaptdWtimebus,
+        kaptdWtimesub: detailedInfo.kaptdWtimesub,
+
+        // School Info
+        educationFacility: detailedInfo.educationFacility,
       });
     }
 
@@ -208,8 +237,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
 
   if (loading || !info) return (
     <div className="flex flex-col items-center justify-center py-16">
-      <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
-      <div className="text-lg font-semibold text-blue-600">데이터를 불러오는 중입니다...</div>
+      <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+      <div className="text-lg font-semibold text-primary">데이터를 불러오는 중입니다...</div>
     </div>
   );
 

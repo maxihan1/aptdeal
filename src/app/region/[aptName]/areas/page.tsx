@@ -40,7 +40,7 @@ export default function AreaAnalysisPage() {
   const searchParams = useSearchParams();
   const aptName = decodeURIComponent(params.aptName as string);
   const selectedArea = Number(searchParams.get('area')) || 84.99;
-  
+
   const [areaAnalysis, setAreaAnalysis] = useState<AreaAnalysis | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -194,9 +194,9 @@ export default function AreaAnalysisPage() {
             단지 상세로
           </Button>
         </Link>
-        
+
         <div className="flex items-center gap-3 mb-4">
-          <Building className="w-8 h-8 text-blue-600" />
+          <Building className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">{aptName}</h1>
             <p className="text-muted-foreground">
@@ -210,7 +210,7 @@ export default function AreaAnalysisPage() {
       <div className="grid md:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">{formatPrice(areaAnalysis.avgPrice)}</div>
+            <div className="text-2xl font-bold text-primary">{formatPrice(areaAnalysis.avgPrice)}</div>
             <p className="text-xs text-muted-foreground">평균 거래가</p>
           </CardContent>
         </Card>
@@ -250,14 +250,14 @@ export default function AreaAnalysisPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">평균가</span>
-                <span className="font-bold text-blue-600">{formatPrice(areaAnalysis.avgPrice)}</span>
+                <span className="font-bold text-primary">{formatPrice(areaAnalysis.avgPrice)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">최저가</span>
                 <span className="font-bold text-green-600">{formatPrice(areaAnalysis.minPrice)}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-gradient-to-r from-green-500 via-blue-500 to-red-500 h-2 rounded-full"
                   style={{ width: '100%' }}
                 ></div>
@@ -273,13 +273,12 @@ export default function AreaAnalysisPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <TrendingUp className={`w-5 h-5 ${
-                  areaAnalysis.recentTrend === 'up' ? 'text-green-600' : 
+                <TrendingUp className={`w-5 h-5 ${areaAnalysis.recentTrend === 'up' ? 'text-green-600' :
                   areaAnalysis.recentTrend === 'down' ? 'text-red-600' : 'text-gray-600'
-                }`} />
+                  }`} />
                 <span className="font-medium">
-                  {areaAnalysis.recentTrend === 'up' ? '상승' : 
-                   areaAnalysis.recentTrend === 'down' ? '하락' : '안정'}
+                  {areaAnalysis.recentTrend === 'up' ? '상승' :
+                    areaAnalysis.recentTrend === 'down' ? '하락' : '안정'}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
@@ -322,24 +321,24 @@ export default function AreaAnalysisPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis 
-                    tick={{ fontSize: 12 }} 
+                  <YAxis
+                    tick={{ fontSize: 12 }}
                     tickFormatter={(value) => (value / 10000).toFixed(0) + '억'}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [formatPrice(value), '거래가']}
                     labelFormatter={(label) => `계약일: ${new Date(label).toLocaleDateString('ko-KR')}`}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="price" 
-                    stroke="#2563eb" 
-                    strokeWidth={2} 
+                  <Line
+                    type="monotone"
+                    dataKey="price"
+                    stroke="#2563eb"
+                    strokeWidth={2}
                     dot={{ r: 4, fill: '#2563eb' }}
                     activeDot={{ r: 6 }}
                   />
@@ -363,13 +362,13 @@ export default function AreaAnalysisPage() {
         <CardContent>
           <div className="space-y-4">
             {deals.map((deal) => (
-              <div key={deal.id} className="border rounded-lg p-4 hover:bg-gray-50">
+              <div key={deal.id} className="border rounded-lg p-4 hover:bg-muted/50">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-semibold">{deal.aptname}</h3>
                     <p className="text-sm text-gray-600">{deal.region}</p>
                   </div>
-                  <span className="font-bold text-blue-600 text-xl">
+                  <span className="font-bold text-primary text-xl">
                     {formatPrice(deal.price)}
                   </span>
                 </div>

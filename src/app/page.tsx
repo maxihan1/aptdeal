@@ -1,104 +1,157 @@
 "use client";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState } from "react"
+import { TrendChart } from "@/components/dashboard/trend-chart"
+import PopularComplexes from "@/components/dashboard/popular-complexes"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { TrendingUp, Building, AlertCircle, MapPin } from "lucide-react"
+import axios from "axios"
+import { format } from "date-fns"
 
-// 타입 정의
-interface Deal {
-  id: string;
-  region: string;
-  address: string;
-  area: number;
-  price: number;
-  date: string;
-  aptName: string;
-  floor: string | number;
-  buildYear: string | number;
-  dealMonth: string | number;
-  dealDay: string | number;
-  tradeType?: string;
-  dealingGbn?: string;
-  cdealType?: string;
-  '거래유형'?: string;
-  '계약해제'?: string;
-  deposit?: number;
-  monthlyRent?: number;
-  contractType?: string;
-  [key: string]: string | number | undefined; // 인덱스 시그니처 수정
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function Home() {
-  // 거래내역 상태 및 페이지네이션, 정렬 등만 남김
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 10;
-  const dealsSectionRef = useRef<HTMLDivElement>(null);
+  const [globalSido, setGlobalSido] = useState<string>("ALL");
+  const [sidoOptions, setSidoOptions] = useState<{ code: string, name: string }[]>([]);
 
-  // 필터링: 단지명+전용면적, 동, 전체
-  // filteredDeals 타입 명시 및 useMemo로 최적화
-  const filteredDeals: Deal[] = useMemo(() => {
-    return []; // 더미 데이터
-  }, []); // 빈 배열로 고정
-  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  const [stats, setStats] = useState({
+    topRegion: { region: '-', count: 0 },
+    monthlyVolume: 0,
+    todayVolume: 0,
+    latestDate: null as string | null,
+    cancelledCount: 0
+  });
 
-  // deals가 바뀌면 1페이지로 초기화
+  // Fetch Sido Options
   useEffect(() => {
-    setCurrentPage(1);
-  }, []); // filteredDeals가 useMemo로 최적화되어 의존성에서 제거
+    axios.get('/api/regions/provinces')
+      .then(res => setSidoOptions(res.data))
+      .catch(console.error);
+  }, []);
 
-  // 거래금액 한글 억/천 단위 포맷 함수
-  // 페이지 변경 함수 (모바일에서 스크롤 포함)
-  const changePage = (newPage: number) => {
-    setCurrentPage(newPage);
-    
-    // 모바일에서 거래내역 영역으로 스크롤
-    if (dealsSectionRef.current && window.innerWidth < 1024) {
-      dealsSectionRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
+  // Fetch Stats (KPIs)
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (globalSido && globalSido !== "ALL") {
+      params.sido = globalSido;
     }
-  };
+    axios.get('/api/stats', { params }).then(res => {
+      setStats(res.data);
+    });
+  }, [globalSido]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 메인 컨텐츠 */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="flex-1 flex flex-col gap-4 min-w-0" ref={dealsSectionRef}>
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">📊</span>
-                </div>
-                거래 내역
-              </h2>
-            </div>
-            <div className="p-4">
-              {/* 모바일 카드형 생략 */}
-              {/* 페이지네이션 */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-4">
-                  <button
-                    className="border rounded px-3 py-1 text-xs"
-                    onClick={() => changePage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    이전
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    className="border rounded px-3 py-1 text-xs"
-                    onClick={() => changePage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    다음
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">대시보드</h2>
+        <div className="flex items-center space-x-2">
+          <Select value={globalSido} onValueChange={setGlobalSido}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="지역 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전국</SelectItem>
+              {sidoOptions.map(opt => (
+                <SelectItem key={opt.code} value={opt.code}>{opt.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </main>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: 최고 거래 지역 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {globalSido === 'ALL' ? '최고 거래 지역 (30일)' : '최고 거래 자치구 (30일)'}
+            </CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold truncate">{stats.topRegion.region}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.topRegion.count}건 거래
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: 30일 거래량 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              월간 거래량 (30일)
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.monthlyVolume.toLocaleString()}건</div>
+            <p className="text-xs text-muted-foreground">
+              최근 30일 기준
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: 오늘의 거래 -> 최근 일자 거래량 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              일일 거래량
+            </CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.todayVolume.toLocaleString()}건</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.latestDate ? `${format(new Date(stats.latestDate), 'yyyy-MM-dd')} 기준` : '오늘 등록된 거래'}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: 취소 건수 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              거래 취소
+            </CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.cancelledCount}건</div>
+            <p className="text-xs text-muted-foreground">
+              최근 30일 기준
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>시장 가격 추이 (30일)</CardTitle>
+            <CardDescription>
+              최근 30일간의 아파트 실거래가 평균입니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <TrendChart globalSido={globalSido} />
+          </CardContent>
+        </Card>
+        <Card className="col-span-3">
+          {/* Header, Title, Description moved inside PopularComplexes or removed to avoid dup logic if PopularComplexes has its own header */}
+          {/* Keeping Card container for consistent layout, but maybe PopularComplexes handles header better? */}
+          {/* Let's render PopularComplexes content directly inside here. */}
+          <CardHeader>
+            <CardTitle>인기 단지 (30일)</CardTitle>
+            <CardDescription>
+              최근 30일간 거래가 가장 활발한 단지입니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <PopularComplexes globalSido={globalSido} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  );
+  )
 }

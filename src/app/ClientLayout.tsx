@@ -4,42 +4,53 @@ import Sidebar from "../components/Sidebar";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { pageview } from "@/lib/gtag";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ModeToggle } from "@/components/mode-toggle";
 
-function Header() {
+import { Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-  
+
   const handleHeaderClick = () => {
-    if (isMobile) {
-      // 모바일에서 헤더 클릭 시 사이드바만 보여주기
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("sidebarOnly", "1");
-      router.replace(`/?${params.toString()}`);
-    } else {
-      // 데스크톱에서는 루트 페이지로 이동
-      router.push("/");
-    }
+    // 로고 클릭시 항상 홈으로
+    router.push("/");
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 w-full">
+    <header className="bg-background/95 backdrop-blur-md shadow-sm border-b border-border w-full sticky top-0 z-50 transition-colors duration-300">
       <div className="w-full px-4">
-        <div className="flex items-center justify-between h-12 sm:h-16">
-          <div 
-            onClick={handleHeaderClick}
-            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
-          >
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xs sm:text-sm">A</span>
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-accent text-foreground focus:outline-none"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+
+            <div
+              onClick={handleHeaderClick}
+              className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg transform transition-transform hover:scale-105">
+                <span className="text-primary-foreground font-extrabold text-sm sm:text-base">A</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 dark:to-blue-400 tracking-tight">
+                APTDEAL
+              </h1>
             </div>
-            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">APTDEAL</h1>
           </div>
-          <div className="hidden sm:block text-sm text-gray-500">
-            아파트 실거래가 조회 서비스
-          </div>
-          <div className="sm:hidden text-xs text-gray-500">
-            실거래가 조회
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden md:block text-sm text-muted-foreground font-medium mr-2">
+              전국 아파트 실거래가 조회
+            </div>
+            <ModeToggle />
           </div>
         </div>
       </div>
@@ -54,6 +65,10 @@ function ClientLayoutContent({
 }>) {
   // 클라이언트에서만 동작하는 모바일 감지
   const [isMobile, setIsMobile] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
@@ -61,11 +76,10 @@ function ClientLayoutContent({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // 현재 경로 확인 (라우팅 변경 감지)
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isRegionPage = pathname.startsWith("/region");
-  const sidebarOnly = searchParams.get("sidebarOnly") === "1";
+  // 경로 변경 시 모바일 메뉴 닫기
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname, searchParams]);
 
   // Google Analytics 페이지뷰 추적
   useEffect(() => {
@@ -73,20 +87,52 @@ function ClientLayoutContent({
     pageview(url);
   }, [pathname, searchParams]);
 
+  const isRegionPage = pathname.startsWith("/region");
+  const sidebarOnly = searchParams.get("sidebarOnly") === "1";
+
   return (
-    <>
-      <Header />
-      <div className="flex flex-col sm:flex-row w-full max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6">
+    <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground transition-colors duration-300">
+      <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
+
+      <div className="flex flex-1 overflow-hidden w-full max-w-screen-2xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-4 gap-4 relative">
+        {/* Desktop Sidebar */}
+        {!sidebarOnly && (
+          <Sidebar className="hidden lg:block w-64 flex-shrink-0 h-full overflow-y-auto rounded-lg border border-border bg-card shadow-sm" />
+        )}
+
+        {/* Mobile Sidebar Overlay */}
+        {isMobile && isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] lg:hidden">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            {/* Drawer */}
+            <div className="absolute left-0 top-0 h-full w-[80%] max-w-[300px] bg-background shadow-2xl transition-transform animate-in slide-in-from-left duration-300 flex flex-col">
+              <div className="p-4 flex justify-between items-center border-b">
+                <span className="font-bold text-lg">메뉴</span>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-accent rounded-full">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <Sidebar className="w-full h-full border-none shadow-none" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar Only Mode (Legacy support if needed, but mainly we use Overlay now) */}
         {sidebarOnly ? (
-          <Sidebar />
+          <Sidebar className="w-full h-full" />
         ) : (
-          <>
-            {(!isMobile || !isRegionPage) && <Sidebar />}
-            <main className="flex-1 py-2 sm:px-4">{children ?? null}</main>
-          </>
+          <main className="flex-1 h-full overflow-y-auto rounded-lg border border-border bg-card shadow-sm relative transition-colors duration-300">
+            {children ?? null}
+          </main>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -97,9 +143,16 @@ export default function ClientLayout({
 }>) {
   return (
     <Suspense>
-      <ClientLayoutContent>
-        {children}
-      </ClientLayoutContent>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <ClientLayoutContent>
+          {children}
+        </ClientLayoutContent>
+      </ThemeProvider>
     </Suspense>
   );
-} 
+}
