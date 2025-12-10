@@ -69,15 +69,15 @@ const lines = lawdCdData.split('\n');
 for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 건너뜀
   const line = lines[i].trim();
   if (!line) continue;
-  
+
   const parts = line.split('\t');
   if (parts.length >= 3 && parts[2] === '존재') {
     const fullName = parts[1];
-    
+
     // 지역명을 공백으로 분리
     const nameParts = fullName.split(/\s+/);
     let sido, sigungu, dong, key, si, gu;
-    
+
     if (nameParts.length === 4) {
       // 4개 부분: "전북특별자치도 전주시 완산구 동" 형태
       [sido, si, gu, dong] = nameParts;
@@ -97,18 +97,18 @@ for (let i = 1; i < lines.length; i++) { // 첫 번째 줄은 헤더이므로 �
       sigungu = "세종시"; // UI에서 선택하는 시군구명
       key = `${sido}-${sigungu}`;
     }
-    
+
     // 동 이름이 있고, 구/군/시로 끝나지 않는 경우만 추가
-    if (key && dong && dong.trim() && 
-        !dong.endsWith('구') && !dong.endsWith('군') && !dong.endsWith('시')) {
-      
+    if (key && dong && dong.trim() &&
+      !dong.endsWith('구') && !dong.endsWith('군') && !dong.endsWith('시')) {
+
       // 특별 매핑 적용
       const mappedKey = specialMapping[key] || key;
-      
+
       if (!sidoSigunguDongMapping[mappedKey]) {
         sidoSigunguDongMapping[mappedKey] = [];
       }
-      
+
       // 중복 제거
       if (!sidoSigunguDongMapping[mappedKey].find(d => d.name === dong)) {
         sidoSigunguDongMapping[mappedKey].push({
@@ -139,11 +139,11 @@ const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
 function getLawdCd(sido, sigungu) {
   if (/^\d{5}$/.test(sigungu)) return sigungu;
   const sigunguArr = regionsLawd.sigungu[sido] || [];
-  
+
   // 1. 정확한 매칭 시도
   let found = sigunguArr.find((item) => item.name === sigungu);
   if (found && found.code) return found.code;
-  
+
   // 2. "시 + 구" 형태인 경우, 시만 매칭 시도 (예: "부천시 원미구" → "부천시")
   if (sigungu.includes(' ')) {
     const si = sigungu.split(' ')[0];
@@ -153,7 +153,7 @@ function getLawdCd(sido, sigungu) {
       return found.code;
     }
   }
-  
+
   console.log(`[getLawdCd] "${sigungu}" 매핑 실패`);
   return null;
 }
@@ -161,19 +161,19 @@ function getLawdCd(sido, sigungu) {
 console.log('🎯 [NEXT] Preparing Next.js app...');
 app.prepare().then(() => {
   console.log('✅ [NEXT] Next.js app prepared successfully');
-  
+
   const server = express();
   server.use(express.json());
-  
+
   console.log('🌐 [EXPRESS] Express server created');
-  
+
   // Health check endpoint for AppPass
   server.get('/health', (req, res) => {
     console.log('💓 [HEALTH] Health check requested');
-    res.status(200).json({ 
-      status: 'healthy', 
+    res.status(200).json({
+      status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV 
+      environment: process.env.NODE_ENV
     });
   });
 
@@ -189,17 +189,17 @@ app.prepare().then(() => {
     let { province, city } = req.query;
     city = decodeURIComponent((city || "").trim());
     province = decodeURIComponent((province || "").trim());
-    
+
     // 시도와 시군구가 모두 제공된 경우, LAWD_CD 기반 매핑 사용
     if (province && city) {
       const key = `${province}-${city}`;
       const dongList = sidoSigunguDongMapping[key] || [];
-      
+
       console.log(`[neighborhoods] Request: ${province} ${city}, Found ${dongList.length} dongs`);
       res.json(dongList);
       return;
     }
-    
+
     // 시도나 시군구가 제공되지 않은 경우 빈 배열 반환
     console.log('[neighborhoods] Missing province or city parameter');
     res.json([]);
@@ -223,7 +223,7 @@ app.prepare().then(() => {
   function filterDealsByDate(deals, startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     return deals.filter(deal => {
       const dealDate = new Date(deal.date);
       return dealDate >= start && dealDate <= end;
@@ -320,7 +320,7 @@ app.prepare().then(() => {
         acc[cur.id] = cur;
         return acc;
       }, {}));
-      
+
       // 날짜 필터링 적용
       const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
       console.log(`[가공된 deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건, 샘플:`, filteredDeals[0]);
@@ -383,7 +383,7 @@ app.prepare().then(() => {
         acc[cur.id] = cur;
         return acc;
       }, {}));
-      
+
       // 날짜 필터링 적용
       const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
       console.log(`[가공된 rent deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건`);
@@ -409,7 +409,7 @@ app.prepare().then(() => {
         LIMIT 1
       `;
       const rows = await executeQuery(query, [sido, sigungu, dong, aptName]);
-      
+
       if (rows && rows.length > 0) {
         res.json({ kaptdaCnt: Number(rows[0].kaptdaCnt) });
       } else {
@@ -425,17 +425,14 @@ app.prepare().then(() => {
   server.get('/', (req, res) => {
     return handle(req, res);
   });
-  // Next.js 라우트 처리 (API 경로 제외)
+  // Next.js 라우트 처리 (모든 경로 - Next.js API 라우트 포함)
   server.all('/*any', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
-    }
     return handle(req, res);
   });
 
   const port = process.env.PORT || 3000;
   console.log('🚀 [SERVER] Starting server on port:', port);
-  
+
   server.listen(port, '0.0.0.0', (err) => {
     if (err) {
       console.error('❌ [SERVER] Failed to start server:', err);
