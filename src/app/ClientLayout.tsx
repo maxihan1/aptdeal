@@ -138,7 +138,7 @@ export default function ClientLayout({
     <Suspense>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
+        defaultTheme="dark"
         enableSystem
         disableTransitionOnChange
       >

@@ -57,20 +57,30 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
   const dealType = searchParams.get("t") || searchParams.get("dealType") || "trade";
   const region = searchParams.get("r") || searchParams.get("region") || "";
 
-  // 날짜는 로컬스토리지에서 읽기 (URL에서 제거)
-  const [startDate, setStartDate] = useState(threeMonthsAgo.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  // 날짜는 URL 파라미터 우선, 없으면 로컬스토리지에서 읽기
+  const urlStartDate = searchParams.get("startDate");
+  const urlEndDate = searchParams.get("endDate");
+
+  const [startDate, setStartDate] = useState(urlStartDate || threeMonthsAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(urlEndDate || today.toISOString().split('T')[0]);
 
   useEffect(() => {
+    // URL에 날짜가 있으면 URL 우선 사용
+    if (urlStartDate && urlEndDate) {
+      setStartDate(urlStartDate);
+      setEndDate(urlEndDate);
+      return;
+    }
+    // URL에 날짜가 없으면 localStorage에서 읽기
     try {
       const cached = localStorage.getItem("apt_filter_state");
       if (cached) {
         const state = JSON.parse(cached);
-        if (state.startDate) setStartDate(state.startDate);
-        if (state.endDate) setEndDate(state.endDate);
+        if (state.startDate && !urlStartDate) setStartDate(state.startDate);
+        if (state.endDate && !urlEndDate) setEndDate(state.endDate);
       }
     } catch { }
-  }, []);
+  }, [urlStartDate, urlEndDate]);
 
   const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}`;
   const [areaDealData, setAreaDealData] = useState<AreaDealData[]>([]);
