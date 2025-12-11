@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         const dong = searchParams.get('dong');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const aptName = searchParams.get('aptName'); // 단지명 필터 (성능 최적화)
 
         if (!sido || !sigungu || !startDate || !endDate) {
             return NextResponse.json(
@@ -83,8 +84,15 @@ export async function GET(request: NextRequest) {
             params.push(dong);
         }
 
+        // 단지명 필터 (성능 최적화: 단지 상세 조회 시 사용)
+        if (aptName) {
+            query += ' AND r.aptNm = ?';
+            params.push(aptName);
+        }
 
-        query += ' ORDER BY r.dealYear DESC, r.dealMonth DESC, r.dealDay DESC LIMIT 10000';
+        // limit 조정: aptName이 있으면 더 적은 데이터
+        const limit = aptName ? 5000 : 10000;
+        query += ` ORDER BY r.dealYear DESC, r.dealMonth DESC, r.dealDay DESC LIMIT ${limit}`;
 
         const rows = await executeQuery(query, params) as RentRow[];
 

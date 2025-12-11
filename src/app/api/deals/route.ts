@@ -30,9 +30,10 @@ export async function GET(request: NextRequest) {
     const dong = searchParams.get('dong');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const aptName = searchParams.get('aptName'); // 단지명 필터 (성능 최적화)
     const limitParam = searchParams.get('limit');
-    // Default limit 10000 if not specified
-    const limit = limitParam ? Number(limitParam) : 10000;
+    // Default limit 10000 if not specified, reduce to 5000 when aptName is provided
+    const limit = limitParam ? Number(limitParam) : (aptName ? 5000 : 10000);
 
     let query = '';
     let newParams: (string | number)[] = [];
@@ -78,6 +79,12 @@ export async function GET(request: NextRequest) {
       if (dong && dong !== 'ALL' && dong !== '전체') {
         query += ' AND d.umdNm = ?';
         newParams.push(dong);
+      }
+
+      // 단지명 필터 (성능 최적화: 단지 상세 조회 시 사용)
+      if (aptName) {
+        query += ' AND d.aptNm = ?';
+        newParams.push(aptName);
       }
 
       // Standard filtering needs order and limit

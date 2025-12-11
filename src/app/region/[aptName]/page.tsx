@@ -73,10 +73,10 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         return;
       }
       setLoading(true);
-      // 1. API 호출 (전월세/매매에 따라 다른 API)
+      // 1. API 호출 (전월세/매매에 따라 다른 API) - aptName 파라미터로 성능 최적화
       const apiPath = dealType === 'rent' ? '/api/rent' : '/api/deals';
       const res = await fetch(
-        `${apiPath}?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}`
+        `${apiPath}?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
       );
       const deals = await res.json();
       console.log('API fetch 후 deals.length:', deals?.length);
@@ -235,22 +235,34 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
     fetchDeals();
   }, [cacheKey, decodedAptName, sido, sigungu, dong, startDate, endDate, dealType, region]);
 
-  if (loading || !info) return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-      <div className="text-lg font-semibold text-primary">데이터를 불러오는 중입니다...</div>
-    </div>
-  );
-
   return (
-    <div className="w-full flex flex-col md:flex-row">
-      <main className="flex-1 min-w-0 md:ml-2 py-2 md:py-2">
-        <ComplexDetail
-          info={info}
-          areas={["전체", ...areaDealData.map((a) => a.area)]}
-          areaDealData={areaDealData}
-        />
-      </main>
+    <div className="w-full flex flex-col md:flex-row relative">
+      {/* Loading Overlay Modal */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 flex flex-col items-center gap-4">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <div className="text-center">
+              <p className="text-lg font-semibold text-foreground">데이터 로딩 중</p>
+              <p className="text-sm text-muted-foreground">잠시만 기다려주세요...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {info ? (
+        <main className="flex-1 min-w-0 md:ml-2 py-2 md:py-2">
+          <ComplexDetail
+            info={info}
+            areas={["전체", ...areaDealData.map((a) => a.area)]}
+            areaDealData={areaDealData}
+          />
+        </main>
+      ) : (
+        <div className="flex-1 flex items-center justify-center py-16">
+          <p className="text-muted-foreground">단지 정보를 불러올 수 없습니다.</p>
+        </div>
+      )}
     </div>
   );
 }

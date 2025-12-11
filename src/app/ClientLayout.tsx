@@ -97,7 +97,7 @@ function ClientLayoutContent({
       <div className="flex flex-1 overflow-hidden w-full max-w-screen-2xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-4 gap-4 relative">
         {/* Desktop Sidebar */}
         {!sidebarOnly && (
-          <Sidebar className="hidden lg:block w-64 flex-shrink-0 h-full overflow-y-auto rounded-lg border border-border bg-card shadow-sm" />
+          <Sidebar className="hidden lg:block w-64 flex-shrink-0 h-screen overflow-y-auto rounded-lg border border-border bg-card shadow-sm" />
         )}
 
         {/* Mobile Sidebar Overlay */}
@@ -109,16 +109,9 @@ function ClientLayoutContent({
               onClick={() => setIsMobileMenuOpen(false)}
             />
             {/* Drawer */}
-            <div className="absolute left-0 top-0 h-full w-[80%] max-w-[300px] bg-background shadow-2xl transition-transform animate-in slide-in-from-left duration-300 flex flex-col">
-              <div className="p-4 flex justify-between items-center border-b">
-                <span className="font-bold text-lg">메뉴</span>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-accent rounded-full">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <Sidebar className="w-full h-full border-none shadow-none" />
-              </div>
+            <div className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-background shadow-2xl transition-transform animate-in slide-in-from-left duration-300 flex flex-col overflow-hidden">
+              {/* Sidebar Content */}
+              <Sidebar className="w-full h-full" closeMobileMenu={() => setIsMobileMenuOpen(false)} />
             </div>
           </div>
         )}

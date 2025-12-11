@@ -224,11 +224,6 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 </a>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="hidden md:block text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                조회기간: {formatDateRange(info.startDate, info.endDate)}
-              </div>
-            </div>
           </div>
         </div>
       </CardHeader>

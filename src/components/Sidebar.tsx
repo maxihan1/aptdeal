@@ -9,7 +9,7 @@ import { trackSearch, trackFavoriteRegion } from "@/lib/gtag";
 import axios from "axios";
 import { format, subDays } from "date-fns";
 import { ko } from "date-fns/locale";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -28,37 +28,84 @@ import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   className?: string;
+  closeMobileMenu?: () => void;
 }
 
 const FAVORITE_KEY = "apt_favorites";
 
-export default function Sidebar({ className }: SidebarProps) {
+export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  // 지역 옵션 상태
-  const [sidoOptions, setSidoOptions] = useState<RegionOption[]>([]);
-  const [sigunguOptions, setSigunguOptions] = useState<RegionOption[]>([]);
-  const [dongOptions, setDongOptions] = useState<RegionOption[]>([]);
 
-  // 필터 상태
-  const [sido, setSido] = useState<string>("");
-  const [sigungu, setSigungu] = useState<string>("");
-  const [dong, setDong] = useState<string>("");
+  // 로컬스토리지 캐시 키
+  const CACHE_KEYS = {
+    SIDO_OPTIONS: "apt_sido_options",
+    SIGUNGU_OPTIONS: "apt_sigungu_options",
+    DONG_OPTIONS: "apt_dong_options",
+    FILTER_STATE: "apt_filter_state"
+  };
+
   // 최근 3개월 기본 날짜 설정
   const getDefaultDates = () => {
     const today = new Date();
     const threeMonthsAgo = new Date(today);
     threeMonthsAgo.setMonth(today.getMonth() - 3);
-
     return {
       start: threeMonthsAgo.toISOString().split('T')[0],
       end: today.toISOString().split('T')[0]
     };
   };
 
-  const [startDate, setStartDate] = useState<string>(getDefaultDates().start);
-  const [endDate, setEndDate] = useState<string>(getDefaultDates().end);
+  // 지역 옵션 상태 (빈 배열로 시작)
+  const [sidoOptions, setSidoOptions] = useState<RegionOption[]>([]);
+  const [sigunguOptions, setSigunguOptions] = useState<RegionOption[]>([]);
+  const [dongOptions, setDongOptions] = useState<RegionOption[]>([]);
+
+  // 필터 상태 (기본값으로 시작)
+  const defaultDates = getDefaultDates();
+  const [sido, setSido] = useState<string>("");
+  const [sigungu, setSigungu] = useState<string>("");
+  const [dong, setDong] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>(defaultDates.start);
+  const [endDate, setEndDate] = useState<string>(defaultDates.end);
   const [dealType, setDealType] = useState<"trade" | "rent">("trade");
+
+  // 마운트 완료 플래그 (hydration 이후에만 localStorage 읽기)
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 클라이언트 마운트 후 localStorage에서 캐시 복원
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      // 필터 상태 복원
+      const cachedFilter = localStorage.getItem(CACHE_KEYS.FILTER_STATE);
+      if (cachedFilter) {
+        const state = JSON.parse(cachedFilter);
+        if (state.sido) setSido(state.sido);
+        if (state.sigungu) setSigungu(state.sigungu);
+        if (state.dong) setDong(state.dong);
+        if (state.startDate) setStartDate(state.startDate);
+        if (state.endDate) setEndDate(state.endDate);
+        if (state.dealType) setDealType(state.dealType);
+      }
+      // 옵션 캐시 복원
+      const cachedSido = localStorage.getItem(CACHE_KEYS.SIDO_OPTIONS);
+      if (cachedSido) setSidoOptions(JSON.parse(cachedSido));
+      const cachedSigungu = localStorage.getItem(CACHE_KEYS.SIGUNGU_OPTIONS);
+      if (cachedSigungu) setSigunguOptions(JSON.parse(cachedSigungu));
+      const cachedDong = localStorage.getItem(CACHE_KEYS.DONG_OPTIONS);
+      if (cachedDong) setDongOptions(JSON.parse(cachedDong));
+    } catch (e) {
+      console.error('Failed to restore cache:', e);
+    }
+  }, [CACHE_KEYS.FILTER_STATE, CACHE_KEYS.SIDO_OPTIONS, CACHE_KEYS.SIGUNGU_OPTIONS, CACHE_KEYS.DONG_OPTIONS]);
+
+  // 필터 상태 변경 시 로컬스토리지에 저장 (마운트 후에만)
+  useEffect(() => {
+    if (!isMounted) return;
+    const filterState = { sido, sigungu, dong, startDate, endDate, dealType };
+    localStorage.setItem(CACHE_KEYS.FILTER_STATE, JSON.stringify(filterState));
+  }, [sido, sigungu, dong, startDate, endDate, dealType, isMounted, CACHE_KEYS.FILTER_STATE]);
 
   // 즐겨찾기 상태
   const [favorites, setFavorites] = useState<RegionOption[]>([]);
@@ -73,49 +120,85 @@ export default function Sidebar({ className }: SidebarProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessages, setModalMessages] = useState<string[]>([]);
 
+  // URL 파라미터 읽기
+  const searchParams = useSearchParams();
 
+  // URL 파라미터에서 초기값 동기화
+  useEffect(() => {
+    const urlSido = searchParams.get('sido');
+    const urlSigungu = searchParams.get('sigungu');
+    const urlDong = searchParams.get('dong');
+    const urlStartDate = searchParams.get('startDate');
+    const urlEndDate = searchParams.get('endDate');
+    const urlDealType = searchParams.get('dealType');
 
+    if (urlSido && urlSido !== sido) setSido(urlSido);
+    if (urlStartDate) setStartDate(urlStartDate);
+    if (urlEndDate) setEndDate(urlEndDate);
+    if (urlDealType === 'trade' || urlDealType === 'rent') setDealType(urlDealType);
 
+    // sigungu와 dong은 시도 선택 후 options이 로드된 후에 설정되도록 pending 처리
+    if (urlSido && urlSigungu) {
+      setPendingSelect({
+        sido: urlSido,
+        sigungu: urlSigungu,
+        dong: urlDong || ""
+      });
+    }
+  }, [searchParams]);
 
   // API 기본 URL
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-  // 시도 불러오기
+  // 시도 불러오기 (캐시 활용)
   useEffect(() => {
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/provinces`).then(res => {
       setSidoOptions(res.data);
+      localStorage.setItem(CACHE_KEYS.SIDO_OPTIONS, JSON.stringify(res.data));
     });
-  }, [API_BASE_URL, setSidoOptions]);
+  }, [API_BASE_URL, CACHE_KEYS.SIDO_OPTIONS]);
 
-  // 시군구 불러오기
+  // 시군구 불러오기 (캐시 활용)
   useEffect(() => {
     if (!sido) {
-      setSigunguOptions([]);
-      setDongOptions([]);
-      setSigungu("");
-      setDong("");
       return;
     }
+    // 캐시에서 이미 해당 시도의 시군구 옵션이 있으면 바로 사용
+    const cacheKey = `${CACHE_KEYS.SIGUNGU_OPTIONS}_${sido}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const options = JSON.parse(cached);
+      setSigunguOptions(options);
+      localStorage.setItem(CACHE_KEYS.SIGUNGU_OPTIONS, JSON.stringify(options));
+    }
+
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/cities`, { params: { province: sido } }).then(res => {
       setSigunguOptions(res.data);
-      setSigungu("");
-      setDongOptions([]);
-      setDong("");
+      localStorage.setItem(cacheKey, JSON.stringify(res.data));
+      localStorage.setItem(CACHE_KEYS.SIGUNGU_OPTIONS, JSON.stringify(res.data));
     });
-  }, [sido, API_BASE_URL, setSigunguOptions, setDongOptions]);
+  }, [sido, API_BASE_URL, CACHE_KEYS.SIGUNGU_OPTIONS]);
 
-  // 읍면동 불러오기
+  // 읍면동 불러오기 (캐시 활용)
   useEffect(() => {
     if (!sigungu || !sido) {
-      setDongOptions([]);
-      setDong("");
       return;
     }
+    // 캐시에서 이미 해당 시군구의 동 옵션이 있으면 바로 사용
+    const cacheKey = `${CACHE_KEYS.DONG_OPTIONS}_${sido}_${sigungu}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const options = JSON.parse(cached);
+      setDongOptions(options);
+      localStorage.setItem(CACHE_KEYS.DONG_OPTIONS, JSON.stringify(options));
+    }
+
     axios.get<RegionOption[]>(`${API_BASE_URL}/api/regions/neighborhoods`, { params: { province: sido, city: sigungu } }).then(res => {
       setDongOptions(res.data);
-      setDong("");
+      localStorage.setItem(cacheKey, JSON.stringify(res.data));
+      localStorage.setItem(CACHE_KEYS.DONG_OPTIONS, JSON.stringify(res.data));
     });
-  }, [sido, sigungu, API_BASE_URL, setDongOptions]);
+  }, [sido, sigungu, API_BASE_URL, CACHE_KEYS.DONG_OPTIONS]);
 
   // 즐겨찾기 불러오기
   useEffect(() => {
@@ -247,30 +330,40 @@ export default function Sidebar({ className }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "mt-2 sm:mt-0 sm:static sm:w-72 border-r flex flex-col h-screen overflow-y-auto bg-background border-border",
+      "flex flex-col h-full bg-background",
       className
     )}>
-      {/* Branded Header Area */}
-      <div className="p-4 pb-3">
-        <div className="bg-gradient-to-br from-primary/90 to-blue-600 dark:from-primary/80 dark:to-blue-700 rounded-2xl p-5 shadow-lg mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <span className="text-white font-extrabold text-xl">A</span>
+      {/* Branded Header Area - Fixed at top */}
+      <div className="p-3 pb-2 flex-shrink-0">
+        <div className="bg-gradient-to-br from-primary/90 to-blue-600 dark:from-primary/80 dark:to-blue-700 rounded-xl p-4 shadow-lg relative">
+          {/* Mobile Close Button */}
+          {closeMobileMenu && (
+            <button
+              onClick={closeMobileMenu}
+              className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+              aria-label="메뉴 닫기"
+            >
+              <ArrowLeft className="h-4 w-4 text-white" />
+            </button>
+          )}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <span className="text-white font-extrabold text-lg">A</span>
             </div>
             <div>
-              <h1 className="text-white font-bold text-xl tracking-tight">APTDEAL</h1>
-              <p className="text-white/70 text-xs font-medium">전국 아파트 실거래가</p>
+              <h1 className="text-white font-bold text-lg tracking-tight">APTDEAL</h1>
+              <p className="text-white/70 text-[11px] font-medium">전국 아파트 실거래가</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-white/80 text-xs">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+          <div className="flex items-center gap-2 text-white/80 text-[11px]">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
             실시간 데이터 업데이트
           </div>
         </div>
       </div>
 
-      {/* 검색 필터 영역 */}
-      <div className="px-4 pb-4 flex-1 flex flex-col gap-4 overflow-y-auto">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <span className="text-base">🔍</span>

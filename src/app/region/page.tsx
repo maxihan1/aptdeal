@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { TrendingUp, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -348,7 +348,8 @@ function RegionPage() {
     const chun = price % 10000;
     let result = '';
     if (eok > 0) result += `${eok}억`;
-    if (chun > 0) result += `${chun.toLocaleString()}만원`;
+    if (chun > 0) result += ` ${chun.toLocaleString()}만원`;
+    else if (eok > 0) result = result.trim();
     return result || '0원';
   };
 
@@ -404,38 +405,38 @@ function RegionPage() {
                 <span className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4" /> 필터 / 검색 설정</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="fixed inset-x-0 bottom-0 mb-0 rounded-t-xl max-h-[85vh] overflow-y-auto w-full max-w-full">
+            <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
               <DialogHeader><DialogTitle>검색 필터</DialogTitle></DialogHeader>
-              <div className="space-y-4 pb-8">
+              <div className="space-y-4 pb-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">지역</label>
                   <div className="grid grid-cols-2 gap-2">
                     <Select value={sido} onValueChange={setSido}>
                       <SelectTrigger><SelectValue placeholder="시/도" /></SelectTrigger>
-                      <SelectContent>{sidoOptions.map(o => <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>)}</SelectContent>
+                      <SelectContent className="max-h-[200px]">{sidoOptions.map(o => <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <Select value={sigungu} onValueChange={(val) => { setSigungu(val); setSido(sido); /* trigger effect */ }} disabled={!sido}>
                       <SelectTrigger><SelectValue placeholder="시/군/구" /></SelectTrigger>
-                      <SelectContent>{sigunguOptions.map(o => <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>)}</SelectContent>
+                      <SelectContent className="max-h-[200px]">{sigunguOptions.map(o => <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <Select value={dong} onValueChange={setDong} disabled={!sigungu}>
                     <SelectTrigger><SelectValue placeholder="읍/면/동" /></SelectTrigger>
-                    <SelectContent>{dongOptions.map(o => <SelectItem key={o.code} value={o.name}>{o.name}</SelectItem>)}</SelectContent>
+                    <SelectContent className="max-h-[200px]">{dongOptions.map(o => <SelectItem key={o.code} value={o.name}>{o.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">기간</label>
-                  <div className="flex gap-2">
-                    <input type="date" className="flex h-10 w-full rounded-md border px-3" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                    <input type="date" className="flex h-10 w-full rounded-md border px-3" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                    <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={endDate} onChange={e => setEndDate(e.target.value)} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">단지명</label>
                   <Select value={selectedAptName || 'all'} onValueChange={v => setSelectedAptName(v === 'all' ? null : v)}>
                     <SelectTrigger><SelectValue placeholder="전체 단지" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px]">
                       <SelectItem value="all">전체 단지</SelectItem>
                       {availableAptNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                     </SelectContent>
@@ -445,14 +446,14 @@ function RegionPage() {
                   <label className="text-sm font-medium">면적</label>
                   <Select value={selectedArea?.toString() || 'all'} onValueChange={v => setSelectedArea(v === 'all' ? null : Number(v))}>
                     <SelectTrigger><SelectValue placeholder="전체 면적" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px]">
                       <SelectItem value="all">전체 면적</SelectItem>
                       {availableAreas.map(a => <SelectItem key={a} value={a.toString()}>{a}㎡</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <DialogClose asChild>
-                  <Button className="w-full" onClick={handleApplyFilter}>필터 적용하기</Button>
+                  <Button className="w-full mt-2" onClick={handleApplyFilter}>필터 적용하기</Button>
                 </DialogClose>
               </div>
             </DialogContent>
@@ -467,10 +468,21 @@ function RegionPage() {
         <Button size="sm" variant={sortField === 'date' ? 'default' : 'outline'} onClick={() => toggleSort('date')}>날짜 {getSortIcon('date')}</Button>
       </div>
 
+      {/* Loading Overlay Modal */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 flex flex-col items-center gap-4">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <div className="text-center">
+              <p className="text-lg font-semibold text-foreground">데이터 로딩 중</p>
+              <p className="text-sm text-muted-foreground">잠시만 기다려주세요...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 결과 리스트 */}
-      {loading ? (
-        <div className="py-10 text-center text-primary">데이터를 불러오는 중입니다...</div>
-      ) : filteredDeals.length > 0 ? (
+      {filteredDeals.length > 0 ? (
         <>
           {/* Pagination Component */}
           {(() => {
@@ -511,64 +523,90 @@ function RegionPage() {
                         <table className="w-full text-sm">
                           <thead>
                             {searchParams.get('dealType') === 'rent' ? (
-                              <tr className="border-b">
-                                <th className="py-2 text-center whitespace-nowrap">지역</th>
-                                <th className="py-2 text-center whitespace-nowrap">단지명</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('area')}>전용면적 {getSortIcon('area')}</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('deposit')}>보증금 {getSortIcon('deposit')}</th>
-                                <th className="py-2 text-center whitespace-nowrap">월세금액</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('date')}>계약일 {getSortIcon('date')}</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('buildYear')}>건축년도 {getSortIcon('buildYear')}</th>
-                                <th className="py-2 text-center whitespace-nowrap">상세</th>
+                              <tr className="border-b bg-muted/30">
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">지역</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">단지명</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('area')}>
+                                  <span className="inline-flex items-center justify-center gap-1">전용면적 {getSortIcon('area')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('deposit')}>
+                                  <span className="inline-flex items-center justify-center gap-1">보증금 {getSortIcon('deposit')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">월세금액</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('date')}>
+                                  <span className="inline-flex items-center justify-center gap-1">계약일 {getSortIcon('date')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('buildYear')}>
+                                  <span className="inline-flex items-center justify-center gap-1">건축년도 {getSortIcon('buildYear')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">상세</th>
                               </tr>
                             ) : (
-                              <tr className="border-b">
-                                <th className="py-2 text-center whitespace-nowrap">지역</th>
-                                <th className="py-2 text-center whitespace-nowrap">단지명</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('area')}>전용면적 {getSortIcon('area')}</th>
-                                <th className="py-2 text-center whitespace-nowrap">동</th>
-                                <th className="py-2 text-center whitespace-nowrap">층</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('price')}>거래금액 {getSortIcon('price')}</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('date')}>계약일 {getSortIcon('date')}</th>
-                                <th className="py-2 text-center whitespace-nowrap">거래유형</th>
-                                <th className="py-2 text-center whitespace-nowrap cursor-pointer" onClick={() => toggleSort('buildYear')}>건축년도 {getSortIcon('buildYear')}</th>
-                                <th className="py-2 text-center whitespace-nowrap">단지상세</th>
+                              <tr className="border-b bg-muted/30">
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">지역</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">단지명</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('area')}>
+                                  <span className="inline-flex items-center justify-center gap-1">전용면적 {getSortIcon('area')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">동</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">층</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('price')}>
+                                  <span className="inline-flex items-center justify-center gap-1">거래금액 {getSortIcon('price')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('date')}>
+                                  <span className="inline-flex items-center justify-center gap-1">계약일 {getSortIcon('date')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">거래유형</th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort('buildYear')}>
+                                  <span className="inline-flex items-center justify-center gap-1">건축년도 {getSortIcon('buildYear')}</span>
+                                </th>
+                                <th className="py-3 px-2 text-center whitespace-nowrap font-semibold">단지상세</th>
                               </tr>
                             )}
                           </thead>
                           <tbody>
-                            {pagedDeals.map((deal: any) => (
-                              <tr key={deal.id} className="border-b hover:bg-muted/50">
-                                {searchParams.get('dealType') === 'rent' ? (
-                                  <>
-                                    <td className="py-2 text-center px-2">{deal.region}</td>
-                                    <td className="py-2 text-center font-bold px-2">{deal.aptName}</td>
-                                    <td className="py-2 text-center px-2">{deal.area}㎡</td>
-                                    <td className="py-2 text-center font-bold text-primary px-2">{formatPrice(deal.deposit)}</td>
-                                    <td className="py-2 text-center px-2">{deal.rent ? deal.rent.toLocaleString() + '만원' : '전세'}</td>
-                                    <td className="py-2 text-center px-2">{deal.date}</td>
-                                    <td className="py-2 text-center px-2">{deal.buildYear}</td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="py-2 text-center px-2">{deal.region}</td>
-                                    <td className="py-2 text-center font-bold px-2">{deal.aptName}</td>
-                                    <td className="py-2 text-center px-2">{deal.area}㎡</td>
-                                    <td className="py-2 text-center px-2">{deal.aptDong || '-'}</td>
-                                    <td className="py-2 text-center px-2">{deal.floor}층</td>
-                                    <td className="py-2 text-center font-bold text-primary px-2">{formatPrice(deal.price)}</td>
-                                    <td className="py-2 text-center px-2">{deal.date}</td>
-                                    <td className="py-2 text-center px-2">{deal.tradeType || '-'}</td>
-                                    <td className="py-2 text-center px-2">{deal.buildYear}</td>
-                                  </>
-                                )}
-                                <td className="py-2 text-center px-2">
-                                  <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${sido}&sigungu=${sigungu}&dong=${dong}&dealType=${searchParams.get('dealType')}`}>
-                                    <Button size="sm" variant="outline"><TrendingUp className="w-4 h-4 mr-1" /> 상세</Button>
-                                  </Link>
-                                </td>
-                              </tr>
-                            ))}
+                            {pagedDeals.map((deal: any) => {
+                              // cdealType이 'Y' 또는 'O'인 경우만 취소된 거래
+                              const isCancelled = ['Y', 'O'].includes(deal.cdealType || '');
+                              return (
+                                <tr key={deal.id} className={`border-b hover:bg-muted/50 ${isCancelled ? 'bg-red-50/50 dark:bg-red-900/10 opacity-70' : ''}`}>
+                                  {searchParams.get('dealType') === 'rent' ? (
+                                    <>
+                                      <td className="py-2 text-center px-2">{deal.region}</td>
+                                      <td className="py-2 text-center font-bold px-2">
+                                        {deal.aptName}
+                                        {isCancelled && <span className="ml-1 text-xs text-red-500 font-normal">[취소]</span>}
+                                      </td>
+                                      <td className="py-2 text-center px-2">{deal.area}㎡</td>
+                                      <td className={`py-2 text-center font-bold px-2 ${isCancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>{formatPrice(deal.deposit)}</td>
+                                      <td className="py-2 text-center px-2">{deal.rent ? deal.rent.toLocaleString() + '만원' : '전세'}</td>
+                                      <td className="py-2 text-center px-2">{deal.date}</td>
+                                      <td className="py-2 text-center px-2">{deal.buildYear}</td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td className="py-2 text-center px-2">{deal.region}</td>
+                                      <td className="py-2 text-center font-bold px-2">
+                                        {deal.aptName}
+                                        {isCancelled && <span className="ml-1 text-xs text-red-500 font-normal">[취소]</span>}
+                                      </td>
+                                      <td className="py-2 text-center px-2">{deal.area}㎡</td>
+                                      <td className="py-2 text-center px-2">{deal.aptDong || '-'}</td>
+                                      <td className="py-2 text-center px-2">{deal.floor}층</td>
+                                      <td className={`py-2 text-center font-bold px-2 ${isCancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>{formatPrice(deal.price)}</td>
+                                      <td className="py-2 text-center px-2">{deal.date}</td>
+                                      <td className="py-2 text-center px-2">{deal.tradeType || '-'}</td>
+                                      <td className="py-2 text-center px-2">{deal.buildYear}</td>
+                                    </>
+                                  )}
+                                  <td className="py-2 text-center px-2">
+                                    <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${sido}&sigungu=${sigungu}&dong=${dong}&dealType=${searchParams.get('dealType')}`}>
+                                      <Button size="sm" variant="outline"><TrendingUp className="w-4 h-4 mr-1" /> 상세</Button>
+                                    </Link>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
