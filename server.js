@@ -177,6 +177,10 @@ app.prepare().then(() => {
     });
   });
 
+  // [성능 최적화] 아래 Express 지역 라우트들은 비활성화됨
+  // 이제 Next.js API route (/src/app/api/regions/...)가 처리함
+  // 이유: Express는 정적 배열 사용, Next.js는 DB에서 최신 데이터 조회
+  /*
   // 지역 API 라우트
   server.get("/api/regions/provinces", (req, res) => {
     res.json(regions.sido);
@@ -204,6 +208,7 @@ app.prepare().then(() => {
     console.log('[neighborhoods] Missing province or city parameter');
     res.json([]);
   });
+  */
 
   // YYYYMM 리스트 생성 함수
   function getMonthList(startDate, endDate) {
@@ -230,6 +235,10 @@ app.prepare().then(() => {
     });
   }
 
+  // [성능 최적화] 아래 Express 라우트는 비활성화됨
+  // 이제 Next.js API route (/src/app/api/deals/route.ts)가 처리함
+  // 이유: Express는 공공데이터 API를 반복 호출하지만, Next.js는 MySQL DB 직접 조회로 훨씬 빠름
+  /*
   // 실거래가 API 연동
   server.get("/api/deals", async (req, res) => {
     const { sido, sigungu, dong, startDate, endDate, dealType } = req.query;
@@ -320,79 +329,109 @@ app.prepare().then(() => {
         acc[cur.id] = cur;
         return acc;
       }, {}));
-
+  
       // 날짜 필터링 적용
-      const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
+      let filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
+  
+      // 동 필터링 적용
+      if (dong && dong !== 'ALL' && dong !== '전체') {
+        filteredDeals = filteredDeals.filter(deal => {
+          // region에서 동 추출 또는 직접 비교
+          const dealDong = deal.region?.split(' ').pop() || '';
+          return dealDong === dong;
+        });
+      }
+  
       console.log(`[가공된 deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건, 샘플:`, filteredDeals[0]);
       res.json(filteredDeals);
     } catch (e) {
       res.status(500).json({ error: "API 호출 실패", detail: e.message });
     }
   });
+    */
 
+  // [성능 최적화] 아래 Express 라우트는 비활성화됨
+  // 이제 Next.js API route (/src/app/api/rent/route.ts)가 처리함
+  // 이유: Express는 공공데이터 API를 반복 호출하지만, Next.js는 MySQL DB 직접 조회로 훨씬 빠름
+  /*
   // 전월세(rent) API 라우트
   server.get("/api/rent", async (req, res) => {
-    const { sido, sigungu, dong, startDate, endDate } = req.query;
-    const lawdCd = getLawdCd(sido, sigungu);
-    if (!lawdCd || !startDate || !endDate) return res.json([]);
-    try {
-      const allDeals = [];
-      const months = getMonthList(startDate, endDate);
-      for (const dealYmd of months) {
-        let pageNo = 1;
-        while (true) {
-          const url = "https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent";
-          const params = {
-            serviceKey: SERVICE_KEY,
-            LAWD_CD: lawdCd,
-            DEAL_YMD: dealYmd,
-            numOfRows: 100,
-            pageNo,
-          };
-          const { data } = await axios.get(url, { params, responseType: "text" });
-          let parsed;
-          try {
-            parsed = JSON.parse(data);
-          } catch (e) {
-            parsed = {};
-          }
-          const items = parsed.response?.body?.items?.item || [];
-          const deals = Array.isArray(items) ? items : items ? [items] : [];
-          if (deals.length === 0) break;
-          allDeals.push(...deals.map((deal, idx) => {
-            const address = deal.jibun ? String(deal.jibun) : '';
-            return {
-              id: `${lawdCd}-${dealYmd}-${pageNo}-${deal.일련번호 || deal.rnum || idx}`,
-              region: `${sido} ${sigungu} ${deal.법정동 || deal.umdNm || ''}`.trim(),
-              address,
-              area: Number(deal.전용면적 || deal.excluUseAr || 0),
-              deposit: Number((deal.deposit || deal.보증금액 || deal.rentGtn || '0').toString().replace(/,/g, '')),
-              rent: Number((deal.monthlyRent || deal.월세금액 || deal.rentFee || '0').toString().replace(/,/g, '')),
-              rentType: deal.contractType || deal.임대구분 || deal.rentGbn || '',
-              date: `${deal.dealYear || deal.년 || ''}-${String(deal.dealMonth || deal.월 || '').padStart(2, '0')}-${String(deal.dealDay || deal.일 || '').padStart(2, '0')}`,
-              aptName: deal.아파트 || deal.aptNm || '',
-              buildYear: deal.건축년도 || deal.buildYear || '',
-            };
-          }));
-          if (deals.length < 100) break;
-          pageNo++;
+  const { sido, sigungu, dong, startDate, endDate } = req.query;
+  const lawdCd = getLawdCd(sido, sigungu);
+  if (!lawdCd || !startDate || !endDate) return res.json([]);
+  try {
+    const allDeals = [];
+    const months = getMonthList(startDate, endDate);
+    for (const dealYmd of months) {
+      let pageNo = 1;
+      while (true) {
+        const url = "https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent";
+        const params = {
+          serviceKey: SERVICE_KEY,
+          LAWD_CD: lawdCd,
+          DEAL_YMD: dealYmd,
+          numOfRows: 100,
+          pageNo,
+        };
+        const { data } = await axios.get(url, { params, responseType: "text" });
+        let parsed;
+        try {
+          parsed = JSON.parse(data);
+        } catch (e) {
+          parsed = {};
         }
+        const items = parsed.response?.body?.items?.item || [];
+        const deals = Array.isArray(items) ? items : items ? [items] : [];
+        if (deals.length === 0) break;
+        allDeals.push(...deals.map((deal, idx) => {
+          const address = deal.jibun ? String(deal.jibun) : '';
+          return {
+            id: `${lawdCd}-${dealYmd}-${pageNo}-${deal.일련번호 || deal.rnum || idx}`,
+            region: `${sido} ${sigungu} ${deal.법정동 || deal.umdNm || ''}`.trim(),
+            address,
+            area: Number(deal.전용면적 || deal.excluUseAr || 0),
+            deposit: Number((deal.deposit || deal.보증금액 || deal.rentGtn || '0').toString().replace(/,/g, '')),
+            rent: Number((deal.monthlyRent || deal.월세금액 || deal.rentFee || '0').toString().replace(/,/g, '')),
+            rentType: deal.contractType || deal.임대구분 || deal.rentGbn || '',
+            date: `${deal.dealYear || deal.년 || ''}-${String(deal.dealMonth || deal.월 || '').padStart(2, '0')}-${String(deal.dealDay || deal.일 || '').padStart(2, '0')}`,
+            aptName: deal.아파트 || deal.aptNm || '',
+            buildYear: deal.건축년도 || deal.buildYear || '',
+          };
+        }));
+        if (deals.length < 100) break;
+        pageNo++;
       }
-      // id 기준 중복 제거
-      const uniqueDeals = Object.values(allDeals.reduce((acc, cur) => {
-        acc[cur.id] = cur;
-        return acc;
-      }, {}));
-
-      // 날짜 필터링 적용
-      const filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
-      console.log(`[가공된 rent deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건`);
-      res.json(filteredDeals);
-    } catch (e) {
-      res.status(500).json({ error: "API 호출 실패", detail: e.message });
     }
+    // id 기준 중복 제거
+    const uniqueDeals = Object.values(allDeals.reduce((acc, cur) => {
+      acc[cur.id] = cur;
+      return acc;
+    }, {}));
+  
+    // 날짜 필터링 적용
+    let filteredDeals = filterDealsByDate(uniqueDeals, startDate, endDate);
+  
+    // 동 필터링 적용
+    if (dong && dong !== 'ALL' && dong !== '전체') {
+      filteredDeals = filteredDeals.filter(deal => {
+        // region에서 동 추출 또는 직접 비교
+        const dealDong = deal.region?.split(' ').pop() || '';
+        return dealDong === dong;
+      });
+    }
+  
+    console.log(`[가공된 rent deals] 총 ${uniqueDeals.length}건, 필터링 후 ${filteredDeals.length}건`);
+    res.json(filteredDeals);
+  } catch (e) {
+    res.status(500).json({ error: "API 호출 실패", detail: e.message });
+  }
   });
+    */
 
+  // [성능 최적화] 아래 Express 라우트는 비활성화됨
+  // 이제 Next.js API route (/src/app/api/apt-households/route.ts)가 처리함
+  // 이유: Next.js 버전이 더 완전한 아파트 정보를 반환 (관리정보, 주차, 지하철, 복리시설 등)
+  /*
   // 단지 총 세대수 조회 API
   server.get('/api/apt-households', async (req, res) => {
     const { sido, sigungu, dong, aptName } = req.query;
@@ -402,12 +441,12 @@ app.prepare().then(() => {
     }
     try {
       const query = `
-        SELECT b.kaptdaCnt 
-        FROM apt_list a
-        JOIN apt_basis_info b ON a.kaptCode = b.kaptCode
-        WHERE a.as1 = ? AND a.as2 = ? AND a.as3 = ? AND a.kaptName = ? 
-        LIMIT 1
-      `;
+    SELECT b.kaptdaCnt 
+    FROM apt_list a
+    JOIN apt_basis_info b ON a.kaptCode = b.kaptCode
+    WHERE a.as1 = ? AND a.as2 = ? AND a.as3 = ? AND a.kaptName = ? 
+    LIMIT 1
+  `;
       const rows = await executeQuery(query, [sido, sigungu, dong, aptName]);
 
       if (rows && rows.length > 0) {
@@ -420,6 +459,7 @@ app.prepare().then(() => {
       res.status(500).json({ error: e.message });
     }
   });
+  */
 
   // 루트 경로는 별도로 Next.js에 전달
   server.get('/', (req, res) => {
