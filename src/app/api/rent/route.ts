@@ -38,12 +38,18 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // 날짜 파싱 - DATE 문자열로 변환
-        const startDateStr = startDate; // YYYY-MM-DD 형식
-        const endDateStr = endDate;
+        // 날짜 파싱 - 연/월/일 분리
+        const startParts = startDate.split('-');
+        const endParts = endDate.split('-');
+        const startYear = parseInt(startParts[0]);
+        const startMonth = parseInt(startParts[1]);
+        const startDay = parseInt(startParts[2]);
+        const endYear = parseInt(endParts[0]);
+        const endMonth = parseInt(endParts[1]);
+        const endDay = parseInt(endParts[2]);
 
         // apt_list 테이블을 통해 지역명 → sggCd 매핑 후 apt_rent_info 조회
-        // 최적화: DATE() 함수 대신 직접 비교, GROUP BY 제거
+        // 최적화: dealYear, dealMonth, dealDay 개별 컬럼 비교로 인덱스 활용
         let query = `
       SELECT
         r.id,
@@ -69,13 +75,19 @@ export async function GET(request: NextRequest) {
         FROM apt_list
         WHERE as1 = ? AND as2 = ?
       ) l ON r.sggCd = l.sggCode
-      WHERE CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0'), '-', LPAD(r.dealDay, 2, '0')) >= ?
-        AND CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0'), '-', LPAD(r.dealDay, 2, '0')) <= ?
+      WHERE r.dealYear >= ? AND r.dealYear <= ?
+        AND (
+          (r.dealYear > ? OR (r.dealYear = ? AND r.dealMonth > ?) OR (r.dealYear = ? AND r.dealMonth = ? AND r.dealDay >= ?))
+          AND
+          (r.dealYear < ? OR (r.dealYear = ? AND r.dealMonth < ?) OR (r.dealYear = ? AND r.dealMonth = ? AND r.dealDay <= ?))
+        )
     `;
 
         const params: (string | number)[] = [
             sido, sigungu,
-            startDateStr, endDateStr
+            startYear, endYear,
+            startYear, startYear, startMonth, startYear, startMonth, startDay,
+            endYear, endYear, endMonth, endYear, endMonth, endDay
         ];
 
         // 동 필터 (선택)
@@ -91,7 +103,7 @@ export async function GET(request: NextRequest) {
         }
 
         // limit 조정: aptName이 있으면 더 적은 데이터
-        const limit = aptName ? 5000 : 10000;
+        const limit = aptName ? 3000 : 5000;
         query += ` ORDER BY r.dealYear DESC, r.dealMonth DESC, r.dealDay DESC LIMIT ${limit}`;
 
         const rows = await executeQuery(query, params) as RentRow[];

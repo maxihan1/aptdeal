@@ -46,17 +46,31 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
   const threeMonthsAgo = new Date(today);
   threeMonthsAgo.setMonth(today.getMonth() - 3);
 
-  const decodedAptName = decodeURIComponent(aptName ?? "신봉마을동일하이빌3단지");
+  const decodedAptName = decodeURIComponent(aptName ?? "");
   const searchParams = useSearchParams();
-  const region = searchParams.get("region") ?? "";
-  const sido = searchParams.get("sido") ?? "경기도";
-  const sigungu = searchParams.get("sigungu") ?? "";
-  const dong = searchParams.get("dong") ?? "";
 
-  // 빈 문자열("")이 들어올 경우를 대비해 || 연산자 사용
-  const startDate = searchParams.get("startDate") || threeMonthsAgo.toISOString().split('T')[0];
-  const endDate = searchParams.get("endDate") || today.toISOString().split('T')[0];
-  const dealType = searchParams.get("dealType") ?? "trade";
+  // 간결한 파라미터 사용 (s=sido, g=sigungu, d=dong, t=dealType)
+  // 기존 파라미터도 하위 호환 지원
+  const sido = searchParams.get("s") || searchParams.get("sido") || "";
+  const sigungu = searchParams.get("g") || searchParams.get("sigungu") || "";
+  const dong = searchParams.get("d") || searchParams.get("dong") || "";
+  const dealType = searchParams.get("t") || searchParams.get("dealType") || "trade";
+  const region = searchParams.get("r") || searchParams.get("region") || "";
+
+  // 날짜는 로컬스토리지에서 읽기 (URL에서 제거)
+  const [startDate, setStartDate] = useState(threeMonthsAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem("apt_filter_state");
+      if (cached) {
+        const state = JSON.parse(cached);
+        if (state.startDate) setStartDate(state.startDate);
+        if (state.endDate) setEndDate(state.endDate);
+      }
+    } catch { }
+  }, []);
 
   const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}`;
   const [areaDealData, setAreaDealData] = useState<AreaDealData[]>([]);

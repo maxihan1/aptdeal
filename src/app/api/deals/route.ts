@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const aptName = searchParams.get('aptName'); // 단지명 필터 (성능 최적화)
     const limitParam = searchParams.get('limit');
-    // Default limit 10000 if not specified, reduce to 5000 when aptName is provided
-    const limit = limitParam ? Number(limitParam) : (aptName ? 5000 : 10000);
+    // Default limit reduced for performance
+    const limit = limitParam ? Number(limitParam) : (aptName ? 3000 : 5000);
 
     let query = '';
     let newParams: (string | number)[] = [];

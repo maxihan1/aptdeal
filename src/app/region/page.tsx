@@ -600,7 +600,7 @@ function RegionPage() {
                                     </>
                                   )}
                                   <td className="py-2 text-center px-2">
-                                    <Link href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${sido}&sigungu=${sigungu}&dong=${dong}&dealType=${searchParams.get('dealType')}`}>
+                                    <Link href={`/apt/${encodeURIComponent(deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${searchParams.get('dealType') || 'trade'}`}>
                                       <Button size="sm" variant="outline"><TrendingUp className="w-4 h-4 mr-1" /> 상세</Button>
                                     </Link>
                                   </td>
@@ -619,7 +619,7 @@ function RegionPage() {
                 {/* Mobile List View */}
                 <div className="lg:hidden space-y-2">
                   {pagedDeals.map((deal: any) => (
-                    <Link key={deal.id} href={`/region/${encodeURIComponent(deal.aptName)}?region=${encodeURIComponent(deal.region)}&sido=${sido}&sigungu=${sigungu}&dong=${dong}&dealType=${searchParams.get('dealType')}`}>
+                    <Link key={deal.id} href={`/apt/${encodeURIComponent(deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${searchParams.get('dealType') || 'trade'}`}>
                       <DealCard deal={deal} />
                     </Link>
                   ))}

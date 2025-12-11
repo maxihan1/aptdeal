@@ -73,8 +73,8 @@ export default function PopularComplexes({ globalSido }: PopularComplexesProps) 
                             <div className="p-4 text-center text-muted-foreground">데이터가 없습니다.</div>
                         ) : (
                             complexes.map((complex, index) => {
-                                const { startDate, endDate } = getDateRange();
-                                const detailUrl = `/region/${encodeURIComponent(complex.aptNm)}?region=${encodeURIComponent(complex.region)}&sido=${encodeURIComponent(complex.sido)}&sigungu=${encodeURIComponent(complex.sigungu)}&dong=${encodeURIComponent(complex.dong || '')}&startDate=${startDate}&endDate=${endDate}&dealType=trade`;
+                                // 간결한 URL 구조 사용
+                                const detailUrl = `/apt/${encodeURIComponent(complex.aptNm)}?s=${encodeURIComponent(complex.sido)}&g=${encodeURIComponent(complex.sigungu)}&d=${encodeURIComponent(complex.dong || '')}&t=trade`;
 
                                 return (
                                     <Link

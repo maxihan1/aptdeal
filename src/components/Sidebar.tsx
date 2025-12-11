@@ -258,15 +258,20 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
     // Google Analytics 추적
     trackSearch(sido, sigungu, dong !== "ALL" ? dong : undefined);
 
-    const searchParams = new URLSearchParams();
-    searchParams.set('sido', sido);
-    searchParams.set('sigungu', sigungu);
-    if (dong && dong !== "ALL") searchParams.set('dong', dong);
-    searchParams.set('startDate', startDate);
-    searchParams.set('endDate', endDate);
-    searchParams.set('dealType', dealType);
-    searchParams.set('loading', 'true'); // 로딩 상태를 URL 파라미터로 전달
-    router.push(`/region/?${searchParams.toString()}`);
+    // 시맨틱 URL 구조 사용: /region/시도/시군구?d=동&t=거래유형
+    // 날짜는 로컬스토리지에서 관리 (URL에서 제거)
+    const encodedSido = encodeURIComponent(sido);
+    const encodedSigungu = encodeURIComponent(sigungu);
+
+    let url = `/region/${encodedSido}/${encodedSigungu}`;
+    const params = new URLSearchParams();
+    if (dong && dong !== "ALL") params.set('d', dong);
+    params.set('t', dealType);
+
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
+    router.push(url);
   };
 
   // 즐겨찾기에서 선택 버튼 클릭 시 예약
