@@ -9,9 +9,10 @@ interface PriceChartProps {
         [key: string]: string | number; // area keys like "84㎡": 120000
     }[];
     areas: string[];
+    colors?: Record<string, string>;
 }
 
-export function PriceChart({ data, areas }: PriceChartProps) {
+export function PriceChart({ data, areas, colors }: PriceChartProps) {
     const { theme } = useTheme()
 
     // ID 생성을 위한 함수 (특수문자 제거)
@@ -24,10 +25,11 @@ export function PriceChart({ data, areas }: PriceChartProps) {
                     <defs>
                         {areas.map((area, index) => {
                             const safeId = getSafeId(area);
+                            const color = colors?.[area] || `hsl(${(index * 137) % 360}, 70%, 50%)`;
                             return (
                                 <linearGradient key={`gradient-${safeId}`} id={`gradient-${safeId}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={`hsl(${(index * 137) % 360}, 70%, 50%)`} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={`hsl(${(index * 137) % 360}, 70%, 50%)`} stopOpacity={0} />
+                                    <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={color} stopOpacity={0} />
                                 </linearGradient>
                             );
                         })}
@@ -63,7 +65,10 @@ export function PriceChart({ data, areas }: PriceChartProps) {
                         }}
                         itemStyle={{ color: 'hsl(var(--foreground))', fontSize: '13px', padding: '2px 0' }}
                         labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.5rem', fontSize: '12px' }}
-                        formatter={(value: number) => {
+                        formatter={(value: number, name: string) => {
+                            // Find area name for color lookup if needed, but 'itemStyle' is general. 
+                            // Recharts handles color squares automatically based on line stroke?
+                            // Yes, usually.
                             const eok = Math.floor(value / 10000);
                             const remainder = Math.round(value % 10000);
                             const formatted = eok > 0
@@ -76,17 +81,18 @@ export function PriceChart({ data, areas }: PriceChartProps) {
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     {areas.map((area, index) => {
                         const safeId = getSafeId(area);
+                        const color = colors?.[area] || `hsl(${(index * 137) % 360}, 70%, 50%)`;
                         return (
                             <Area
                                 key={area}
                                 type="monotone"
                                 dataKey={area}
-                                name={`${area}㎡`}
-                                stroke={`hsl(${(index * 137) % 360}, 70%, 50%)`}
+                                name={`${area}`} // area has symbol usually
+                                stroke={color}
                                 strokeWidth={3}
                                 fill={`url(#gradient-${safeId})`}
-                                dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--background))", stroke: `hsl(${(index * 137) % 360}, 70%, 50%)` }}
-                                activeDot={{ r: 7, strokeWidth: 0, fill: `hsl(${(index * 137) % 360}, 70%, 50%)` }}
+                                dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--background))", stroke: color }}
+                                activeDot={{ r: 7, strokeWidth: 0, fill: color }}
                                 connectNulls
                             />
                         );

@@ -8,6 +8,7 @@ import axios from "axios"
 import { format } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DetailDialog } from "@/components/dashboard/detail-dialog"
 
 export default function Home() {
   const [globalSido, setGlobalSido] = useState<string>("ALL");
@@ -20,6 +21,27 @@ export default function Home() {
     todayVolume: 0,
     latestDate: null as string | null,
     cancelledCount: 0
+  });
+
+  // Dialog State with Pagination
+  const [dialogState, setDialogState] = useState<{
+    open: boolean;
+    title: string;
+    type: 'ranking' | 'deals';
+    data: any[];
+    loading: boolean;
+    page: number;
+    hasMore: boolean;
+    currentParams: any; // Store params for loadMore
+  }>({
+    open: false,
+    title: "",
+    type: 'ranking',
+    data: [],
+    loading: false,
+    page: 0,
+    hasMore: true,
+    currentParams: {}
   });
 
   // Fetch Sido Options
@@ -40,11 +62,151 @@ export default function Home() {
     });
   }, [globalSido]);
 
+  // Helper to fetch details (deals)
+  const fetchDeals = async (params: any, page: number) => {
+    const limit = 20; // Load 20 at a time for smooth infinite scroll
+    const offset = page * limit;
+    const res = await axios.get('/api/deals', {
+      params: { ...params, limit, offset }
+    });
+    return res.data;
+  };
+
+  // Load More Handler (Infinite Scroll)
+  const handleLoadMore = async () => {
+    if (dialogState.loading || !dialogState.hasMore) return;
+
+    // Prevent double fetch if strict mode triggers twice
+    // For simplicity, just check loading.
+
+    // We don't set loading=true for "load more" to avoid full spinner replacement?
+    // But DetailDialog shows spinner at bottom if loading is true.
+    // Let's set loading true but keep data.
+
+    // Actually, distinct 'fetchingMore' state might be better but let's reuse loading with care.
+    // If we set loading=true, the list might be hidden in some implementations? 
+    // In DetailDialog, valid data is shown even if loading.
+
+    // However, to avoid flickering, let's proceed.
+
+    try {
+      const nextPage = dialogState.page + 1;
+
+      let newData = [];
+      if (dialogState.type === 'deals') {
+        newData = await fetchDeals(dialogState.currentParams, nextPage);
+      } else {
+        // Ranking probably no pagination requested or API doesn't support it yet
+        return;
+      }
+
+      setDialogState(prev => ({
+        ...prev,
+        data: [...prev.data, ...newData],
+        page: nextPage,
+        hasMore: newData.length > 0, // If we got data, maybe more exists. If empty, stop.
+        // If length < limit, also stop?
+        // newData.length === 20 ? true : false
+      }));
+
+    } catch (error) {
+      console.error("Failed to load more data", error);
+    }
+  };
+
+  // Handle Card Click
+  const handleCardClick = async (type: 'topRegion' | 'monthly' | 'daily' | 'cancelled') => {
+    // Reset State
+    setDialogState(prev => ({
+      ...prev,
+      open: true,
+      loading: true,
+      data: [],
+      page: 0,
+      hasMore: true,
+      currentParams: {}
+    }));
+
+    try {
+      let data = [];
+      let params: any = {};
+      let dialogType: 'ranking' | 'deals' = 'deals';
+      let title = "";
+
+      if (type === 'topRegion') {
+        title = "최고 거래 지역";
+        dialogType = 'ranking';
+        // For Ranking, we currently fetch all at once or restricted top 100.
+        // If sorting filter applies, pass it.
+        const rankParams: any = {};
+        if (globalSido && globalSido !== "ALL") rankParams.sido = globalSido;
+        const res = await axios.get('/api/rank/regions', { params: rankParams });
+        data = res.data;
+      } else {
+        // Deals types
+        dialogType = 'deals';
+        params = { limit: 20 }; // Initial limit
+        if (globalSido && globalSido !== "ALL") params.sido = globalSido;
+
+        if (type === 'monthly') {
+          title = "월간 거래 내역 (최근 30일)";
+          const today = new Date();
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(today.getDate() - 30);
+          params.startDate = thirtyDaysAgo.toISOString().split('T')[0];
+          params.endDate = today.toISOString().split('T')[0];
+          params.excludeCancelled = true; // Exclude cancelled
+
+        } else if (type === 'daily') {
+          const dateLabel = stats.latestDate ? format(new Date(stats.latestDate), 'MM.dd') : '오늘';
+          title = `일일 거래 내역 (${dateLabel})`;
+          const targetDate = stats.latestDate ? stats.latestDate.split('T')[0] : new Date().toISOString().split('T')[0];
+          params.startDate = targetDate;
+          params.endDate = targetDate;
+          params.excludeCancelled = true; // Exclude cancelled
+
+        } else if (type === 'cancelled') {
+          title = "최근 거래 취소 내역 (30일)";
+          const today = new Date();
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(today.getDate() - 30);
+          params.startDate = thirtyDaysAgo.toISOString().split('T')[0];
+          params.endDate = today.toISOString().split('T')[0];
+          params.onlyCancelled = true;
+        }
+
+        // Initial Fetch
+        // We use offset=0 (default)
+        const res = await axios.get('/api/deals', { params });
+        data = res.data;
+      }
+
+      setDialogState(prev => ({
+        ...prev,
+        title,
+        type: dialogType,
+        data,
+        loading: false,
+        currentParams: params,
+        page: 0,
+        hasMore: data.length >= 20 // If retrieved full batch, assume more
+      }));
+
+    } catch (error) {
+      console.error("Failed to fetch detail data", error);
+      setDialogState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+
   // 시장정보 컴포넌트 (모바일/데스크톱 공용)
   const MarketInfoCards = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={mobile ? "space-y-3" : "grid gap-4 md:grid-cols-2 lg:grid-cols-4"}>
       {/* Card 1: 최고 거래 지역 */}
-      <Card className={mobile ? "border-0 shadow-none bg-muted/30" : ""}>
+      <Card
+        className={`${mobile ? "border-0 shadow-none bg-muted/30" : ""} cursor-pointer hover:bg-accent/50 transition-colors`}
+        onClick={() => handleCardClick('topRegion')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             {globalSido === 'ALL' ? '최고 거래 지역' : '최고 거래 자치구'}
@@ -60,7 +222,10 @@ export default function Home() {
       </Card>
 
       {/* Card 2: 30일 거래량 */}
-      <Card className={mobile ? "border-0 shadow-none bg-muted/30" : ""}>
+      <Card
+        className={`${mobile ? "border-0 shadow-none bg-muted/30" : ""} cursor-pointer hover:bg-accent/50 transition-colors`}
+        onClick={() => handleCardClick('monthly')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             월간 거래량
@@ -76,7 +241,10 @@ export default function Home() {
       </Card>
 
       {/* Card 3: 일일 거래량 */}
-      <Card className={mobile ? "border-0 shadow-none bg-muted/30" : ""}>
+      <Card
+        className={`${mobile ? "border-0 shadow-none bg-muted/30" : ""} cursor-pointer hover:bg-accent/50 transition-colors`}
+        onClick={() => handleCardClick('daily')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             일일 거래량
@@ -92,7 +260,10 @@ export default function Home() {
       </Card>
 
       {/* Card 4: 취소 건수 */}
-      <Card className={mobile ? "border-0 shadow-none bg-muted/30" : ""}>
+      <Card
+        className={`${mobile ? "border-0 shadow-none bg-muted/30" : ""} cursor-pointer hover:bg-accent/50 transition-colors`}
+        onClick={() => handleCardClick('cancelled')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             거래 취소
@@ -111,6 +282,18 @@ export default function Home() {
 
   return (
     <div className="flex-1 space-y-4 p-3 sm:p-4 md:p-8 pt-4 sm:pt-6">
+      {/* Detail Dialog */}
+      <DetailDialog
+        open={dialogState.open}
+        onOpenChange={(open) => setDialogState(prev => ({ ...prev, open }))}
+        title={dialogState.title}
+        type={dialogState.type}
+        data={dialogState.data}
+        loading={dialogState.loading}
+        onLoadMore={handleLoadMore}
+        hasMore={dialogState.hasMore}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">대시보드</h2>

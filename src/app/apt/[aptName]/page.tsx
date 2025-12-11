@@ -148,7 +148,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       console.log('------------------------');
 
       // **드랍다운 옵션 생성: '동'으로만 필터링된 데이터 사용**
-      const areaOptions = Array.from(new Set(filteredDeals.map(d => Math.floor(d.area) + '㎡')));
+      const areaOptions = Array.from(new Set(filteredDeals.map(d => Math.floor(d.area) + '㎡')))
+        .sort((a, b) => parseFloat(a) - parseFloat(b));
       // aptNameOptions는 dongFilteredOnlyDeals에서 추출
       const aptNameOptions = Array.from(new Set(dongFilteredOnlyDeals.map(d => d.aptName)));
 
@@ -209,7 +210,9 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
           areaMap[area].push(dealData);
         });
       }
-      const areaDealData = Object.entries(areaMap).map(([area, prices]) => ({ area, prices }));
+      const areaDealData = Object.entries(areaMap)
+        .map(([area, prices]) => ({ area, prices }))
+        .sort((a, b) => parseFloat(a.area) - parseFloat(b.area));
       setAreaDealData(areaDealData);
 
       // **info 객체에 옵션 포함**

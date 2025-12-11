@@ -196,6 +196,15 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return Object.values(dataMap).sort((a, b) => a.date.localeCompare(b.date));
   }, [processedData, selectedArea]);
 
+  // 면적별 고정 컬러 생성 (인덱스 기반)
+  const areaColors = useMemo(() => {
+    const colors: Record<string, string> = {};
+    areaStats.forEach((stat, idx) => {
+      colors[stat.area] = `hsl(${(idx * 137) % 360}, 70%, 50%)`;
+    });
+    return colors;
+  }, [areaStats]);
+
   const targetAreas = selectedArea === "전체" ? areaStats.map(a => a.area) : [selectedArea];
   const fullAddress = `${info.region} ${info.address}`.trim();
 
@@ -307,10 +316,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                       "bg-card border rounded-lg p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer group",
                       selectedArea === stat.area ? "ring-2 ring-primary bg-primary/5" : ""
                     )}
-                    onClick={() => setSelectedArea(stat.area)}
+                    onClick={() => setSelectedArea(selectedArea === stat.area ? "전체" : stat.area)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-2 h-10 rounded-full transition-transform group-hover:scale-y-110" style={{ backgroundColor: `hsl(${(idx * 137) % 360}, 70%, 50%)` }} />
+                      <div className="w-2 h-10 rounded-full transition-transform group-hover:scale-y-110" style={{ backgroundColor: areaColors[stat.area] }} />
                       <div>
                         <div className="font-bold text-lg">{stat.area}</div>
                         <div className="text-xs text-muted-foreground">{stat.count}건 거래</div>
@@ -330,6 +339,22 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <BarChart className="w-5 h-5 text-primary" />
                   가격 추이
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    ({(() => {
+                      const start = new Date(info.startDate);
+                      const end = new Date(info.endDate);
+                      const diffTime = Math.abs(end.getTime() - start.getTime());
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      // Roughly check range
+                      if (diffDays >= 3650) return '전체';
+                      if (diffDays >= 1090) return '최근 3년';
+                      if (diffDays >= 360) return '최근 1년';
+                      if (diffDays >= 170) return '최근 6개월';
+                      if (diffDays >= 85) return '최근 3개월'; // 3 months is ~90 days
+                      if (diffDays >= 25) return '최근 1개월';
+                      return '사용자 지정';
+                    })()})
+                  </span>
                 </h3>
                 <Select value={selectedArea} onValueChange={setSelectedArea}>
                   <SelectTrigger className="w-[110px] h-9 text-sm">
@@ -344,7 +369,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 </Select>
               </div>
               <div className="bg-card border rounded-xl p-4 shadow-sm">
-                <PriceChart data={chartData} areas={targetAreas} />
+                <PriceChart data={chartData} areas={targetAreas} colors={areaColors} />
               </div>
             </div>
           </TabsContent>

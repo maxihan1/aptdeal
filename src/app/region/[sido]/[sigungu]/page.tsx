@@ -222,6 +222,26 @@ function SemanticRegionContent() {
                 </CardHeader>
             </Card>
 
+            {/* 단지 선택 및 필터 */}
+            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                <Select
+                    value={selectedAptName || "all"}
+                    onValueChange={(value) => setSelectedAptName(value === "all" ? null : value)}
+                >
+                    <SelectTrigger className="w-full sm:w-[240px] bg-background">
+                        <SelectValue placeholder="단지 선택 (전체)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">전체 단지 ({deals.length}건)</SelectItem>
+                        {availableAptNames.map(name => (
+                            <SelectItem key={name} value={name}>
+                                {name} ({deals.filter(d => d.aptName === name).length}건)
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
             {/* 모바일 정렬 버튼 */}
             <div className="lg:hidden flex flex-wrap gap-2 mb-4">
                 <Button size="sm" variant={sortField === 'area' ? 'default' : 'outline'} onClick={() => toggleSort('area')}>전용면적 {getSortIcon('area')}</Button>

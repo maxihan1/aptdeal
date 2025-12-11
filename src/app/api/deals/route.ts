@@ -35,8 +35,14 @@ export async function GET(request: NextRequest) {
     // Default limit reduced for performance
     const limit = limitParam ? Number(limitParam) : (aptName ? 3000 : 5000);
 
+    const offsetParam = searchParams.get('offset');
+    const offset = offsetParam ? Number(offsetParam) : 0;
+
     let query = '';
     let newParams: (string | number)[] = [];
+
+    const onlyCancelled = searchParams.get('onlyCancelled') === 'true';
+    const excludeCancelled = searchParams.get('excludeCancelled') === 'true';
 
     // CASE 1: 지역 필터 있음 (sido, sigungu) -> 기존 로직 (JOIN 최적화)
     if (sido && sigungu) {
@@ -87,10 +93,17 @@ export async function GET(request: NextRequest) {
         newParams.push(aptName);
       }
 
+      if (onlyCancelled) {
+        query += " AND (d.cdealType = 'O' OR d.cdealType = 'Y') ";
+      } else if (excludeCancelled) {
+        query += " AND (d.cdealType IS NULL OR d.cdealType = '') ";
+      }
+
       // Standard filtering needs order and limit
       // LIMIT ? causes issues in prepared statements for some MySQL versions/configs
       const safeLimit = Number.isInteger(limit) ? limit : 10000;
-      query += ` ORDER BY d.dealYear DESC, d.dealMonth DESC, d.dealDay DESC LIMIT ${safeLimit}`;
+      const safeOffset = Number.isInteger(offset) ? offset : 0;
+      query += ` ORDER BY d.dealYear DESC, d.dealMonth DESC, d.dealDay DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`;
       // newParams.push(limit); -> removed
 
     } else {
@@ -104,17 +117,74 @@ export async function GET(request: NextRequest) {
         subQueryParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
       }
 
+      // SIDO Filter for dashboard global filter (when NO Sigungu selected)
+      // If Sido is present but Sigungu isn't, we MUST filter by SGG code prefix locally or by joining.
+      // Since sggCd index exists, checking LEFT(sggCd, 2) is slow.
+      // But we can find the range of sggCds for a Sido. Or joins.
+      // For Dashboard performance, let's look at how we can filter by Sido efficiently without full map.
+      // Actually, if 'sido' is passed but no 'sigungu', we are in CASE 2 usually?
+      // Wait, CASE 1 checks `if (sido && sigungu)`.
+      // What if `sido` is passed but `sigungu` is null? (e.g. Dashboard "Seoul" selected)
+      // Then we fall into CASE 2.
+      // We need to implement Sido filtering here in CASE 2.
+
+      if (sido && !sigungu) {
+        // We need to match Sido to SggCodes or find a way to filter.
+        // Since `apt_list` has `as1`, we can get valid SggCodes.
+        // But that's complex to inject into subquery.
+        // Alternative: `WHERE sggCd LIKE '11%'` etc. (Use index if prefix match?)
+        // `sggCd` is varchar(5) or (10).
+        // If we map Sido content to Code prefix? e.g. Seoul=11, Busan=26...
+        // We don't have that map hardcoded here.
+        // Querying `apt_list` for sggCodes matching `as1`?
+        // Let's do a subquery or join inside the subquery?
+        // "SELECT id FROM apt_deal_info WHERE sggCd IN (SELECT sggCode FROM apt_list WHERE as1=?)"
+        // This might be slow if subquery is re-run.
+        // Efficient way: JOIN in the subquery?
+        // `JOIN apt_deal_info d ON ... JOIN apt_list l ON ... WHERE l.as1 = ?`
+        // We need to restructure the subquery heavily or use a cached prefix map.
+        // Given the environment, let's keep it simple: 
+        // If Sido is selected, we really should have been passing it.
+        // Let's try to add the Sido filter to the subquery if possible.
+        // Actually, if we just let the main query filter it, the LIMIT in subquery will chop off relevant data.
+        // So filtering MUST happen in subquery.
+
+        // Let's rely on the user passing `sigungu` or if it's GLOBAL Sido, we might need a `sido` param logic here.
+        // The current implementation IGNORES `sido` if `sigungu` is missing in CASE 2 (except for what I'm about to add).
+        // Let's look up sggPrefix? 
+        // `apt_list` has `bjdCode`. `sggCode` is `LEFT(bjdCode, 5)`. 
+        // If we query `SELECT DISTINCT LEFT(bjdCode, 2) FROM apt_list WHERE as1 = ?` we get the 2-digit prefix.
+        // But we can't do async inside this synchronous block easily without refactoring or ignoring it.
+        // WAIT! The current `page.tsx` logic sends `sido` code (e.g. '11', '26')?
+        // Let's check `page.tsx`:
+        // `setGlobalSido` -> `axios.get('/api/regions/provinces')`.
+        // `provinces` usually return codes like '11', '26'.
+        // So `sido` param IS the code (e.g. '11' for Seoul).
+        // So we can use `sggCd LIKE '11%'`.
+
+        if (sido.length === 2 && !isNaN(Number(sido))) {
+          subQueryWhere += ` AND sggCd LIKE '${sido}%' `;
+        }
+      }
+
+      if (onlyCancelled) {
+        subQueryWhere += " AND (cdealType = 'O' OR cdealType = 'Y') ";
+      } else if (excludeCancelled) {
+        subQueryWhere += " AND (cdealType IS NULL OR cdealType = '') ";
+      }
+
       // 서브쿼리: ID만 빠르게 추출 (인덱스 활용)
       // LIMIT ? inside subquery sometimes causes 'Incorrect arguments' in prepared statements
       // So we interpolate the number directly after ensuring it is safe.
       const safeLimit = Number.isInteger(limit) ? limit : 10000;
+      const safeOffset = Number.isInteger(offset) ? offset : 0;
 
       const subQuery = `
             SELECT id 
             FROM apt_deal_info 
             WHERE ${subQueryWhere}
             ORDER BY dealDate DESC
-            LIMIT ${safeLimit}
+            LIMIT ${safeLimit} OFFSET ${safeOffset}
         `;
       // remove limit from params as it is now interpolated
       // subQueryParams.push(limit); -> removed
