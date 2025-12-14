@@ -43,7 +43,7 @@ function getBackoffDelay(attempt) {
  * @param {object} params - 쿼리 파라미터
  * @returns {Promise<object>} API 응답 데이터
  */
-async function fetchWithRetry(url, params) {
+export async function fetchWithRetry(url, params) {
     let lastError;
 
     for (let attempt = 0; attempt < API_CONFIG.MAX_RETRIES; attempt++) {

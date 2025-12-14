@@ -13,8 +13,8 @@
  */
 
 import { testConnection, closeConnection, executeQuery } from './utils/db.js';
-import { fetchWithRetry, getAPITotalCount, API_CONFIG } from './utils/api.js';
-import { logInfo, logError, logWarning } from './utils/logger.js';
+import { fetchAptDeals, fetchAptRents, getAPITotalCount, API_CONFIG } from './utils/api.js';
+import { log, logError, logWarning } from './utils/logger.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -45,7 +45,7 @@ const regionsPath = path.join(__dirname, '..', '..', '..', 'lawd_cd_map.json');
 let REGIONS = {};
 try {
     REGIONS = JSON.parse(fs.readFileSync(regionsPath, 'utf-8'));
-    logInfo(`지역 코드 로드 완료: ${Object.keys(REGIONS).length}개`);
+    log(`지역 코드 로드 완료: ${Object.keys(REGIONS).length}개`);
 } catch (error) {
     logError(`지역 코드 파일 로드 실패: ${error.message}`);
     process.exit(1);
@@ -95,12 +95,14 @@ async function verifyAndRecoverRegionMonth(regionName, regionCode, year, month, 
             logWarning(`[${type}] ${regionName} ${year}-${month}: API(${apiCount}) > DB(${dbCount}), 차이 ${diff}건 → 복구 시작`);
 
             // API에서 전체 데이터 가져오기
-            const items = await fetchWithRetry(apiUrl, regionCode, dealYmd, SERVICE_KEY);
+            const items = type === 'deal'
+                ? await fetchAptDeals(regionCode, dealYmd, SERVICE_KEY)
+                : await fetchAptRents(regionCode, dealYmd, SERVICE_KEY);
 
             if (items && items.length > 0) {
                 // 데이터 변환 및 삽입
                 const insertedCount = await insertData(items, type, regionCode, year, month);
-                logInfo(`[${type}] ${regionName} ${year}-${month}: ${insertedCount}건 복구 완료`);
+                log(`[${type}] ${regionName} ${year}-${month}: ${insertedCount}건 복구 완료`);
                 return { synced: insertedCount, diff };
             }
         }
@@ -130,14 +132,13 @@ async function insertData(items, type, regionCode, year, month) {
         for (const item of batch) {
             try {
                 if (type === 'deal') {
-                    // 매매 데이터 삽입
+                    // 매매 데이터 삽입 (현재 스키마에 맞게 간소화)
                     await executeQuery(`
             INSERT INTO apt_deal_info 
             (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
              buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
-             jibun, landLeaseholdGbn, rgstDate, roadNm, roadNmBonbun, roadNmBuilCode,
-             roadNmCd, roadNmSeq, roadNmSggCd, roadNmSubbun, slerGbn, umdCd, umdNm)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               dealAmount = VALUES(dealAmount),
               cdealType = VALUES(cdealType),
@@ -161,30 +162,20 @@ async function insertData(items, type, regionCode, year, month) {
                         item.jibun || '',
                         item.landLeaseholdGbn || '',
                         item.rgstDate || '',
-                        item.roadNm || '',
-                        item.roadNmBonbun || '',
-                        item.roadNmBuilCode || '',
-                        item.roadNmCd || '',
-                        item.roadNmSeq || '',
-                        item.roadNmSggCd || '',
-                        item.roadNmSubbun || '',
                         item.slerGbn || '',
-                        item.umdCd || '',
                         item.umdNm || ''
                     ]);
                 } else {
-                    // 전월세 데이터 삽입
+                    // 전월세 데이터 삽입 (현재 스키마에 맞게 간소화)
                     await executeQuery(`
             INSERT INTO apt_rent_info 
             (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
-             monthlyRent, preDeposit, buildYear, aptDong, contractType, contractTerm,
-             jibun, previousDeposit, previousMonthlyRent, renewalContractDate,
-             roadNm, roadNmBonbun, roadNmBuilCode, roadNmCd, roadNmSeq, 
-             roadNmSggCd, roadNmSubbun, useRRRight, umdCd, umdNm)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
+             jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               monthlyRent = VALUES(monthlyRent),
-              preDeposit = VALUES(preDeposit),
+              deposit = VALUES(deposit),
               contractType = VALUES(contractType)
           `, [
                         regionCode,
@@ -195,24 +186,15 @@ async function insertData(items, type, regionCode, year, month) {
                         month,
                         parseInt(item.dealDay) || 0,
                         parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
-                        parseInt(String(item.deposit || item.preDeposit || '0').replace(/,/g, '')) || 0,
+                        parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
                         parseInt(item.buildYear) || 0,
                         item.aptDong || '',
                         item.contractType || '',
                         item.contractTerm || '',
                         item.jibun || '',
-                        parseInt(String(item.previousDeposit || '0').replace(/,/g, '')) || 0,
-                        parseInt(String(item.previousMonthlyRent || '0').replace(/,/g, '')) || 0,
-                        item.renewalContractDate || '',
-                        item.roadNm || '',
-                        item.roadNmBonbun || '',
-                        item.roadNmBuilCode || '',
-                        item.roadNmCd || '',
-                        item.roadNmSeq || '',
-                        item.roadNmSggCd || '',
-                        item.roadNmSubbun || '',
+                        parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
+                        parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
                         item.useRRRight || '',
-                        item.umdCd || '',
                         item.umdNm || ''
                     ]);
                 }
@@ -245,8 +227,8 @@ async function main() {
     const targetMonths = getTargetMonths(MONTHS_TO_CHECK);
     const regionEntries = Object.entries(REGIONS);
 
-    logInfo(`검증 대상: ${targetMonths.length}개월 × ${regionEntries.length}개 지역 × 2 (매매/전월세)`);
-    logInfo(`검증 기간: ${targetMonths[targetMonths.length - 1].year}-${targetMonths[targetMonths.length - 1].month} ~ ${targetMonths[0].year}-${targetMonths[0].month}`);
+    log(`검증 대상: ${targetMonths.length}개월 × ${regionEntries.length}개 지역 × 2 (매매/전월세)`);
+    log(`검증 기간: ${targetMonths[targetMonths.length - 1].year}-${targetMonths[targetMonths.length - 1].month} ~ ${targetMonths[0].year}-${targetMonths[0].month}`);
 
     let totalSynced = { deal: 0, rent: 0 };
     let totalDiff = { deal: 0, rent: 0 };
@@ -293,7 +275,158 @@ async function main() {
 [${new Date().toISOString()}] ✅ ${mode === 'weekly' ? '주간' : '일일'} 동기화 완료!
 `);
 
+    // 대시보드 캐시 갱신
+    await refreshDashboardCache();
+
     await closeConnection();
+}
+
+/**
+ * 대시보드 통계 캐시 갱신
+ */
+async function refreshDashboardCache() {
+    console.log(`
+============================================================
+  📊 대시보드 캐시 갱신 시작
+============================================================
+`);
+
+    const cacheStartTime = Date.now();
+
+    try {
+        // 캐시 테이블 생성 (없으면)
+        await executeQuery(`
+            CREATE TABLE IF NOT EXISTS dashboard_stats_cache (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                region_code VARCHAR(50) NOT NULL,
+                stat_type VARCHAR(50) NOT NULL,
+                stat_value JSON NOT NULL,
+                latest_deal_date VARCHAR(10),
+                calculated_at DATETIME NOT NULL,
+                UNIQUE KEY uk_region_stat (region_code, stat_type),
+                INDEX idx_calculated_at (calculated_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        // 시도 목록 조회
+        const [sidoRows] = await executeQuery(`
+            SELECT DISTINCT as1 FROM apt_list WHERE as1 IS NOT NULL AND as1 != '' ORDER BY as1
+        `);
+        const sidoList = ['ALL', ...sidoRows.map(r => r.as1)];
+
+        // 전국 최신 거래일 조회 (모든 지역에서 통일된 날짜 사용)
+        const [globalLatestRows] = await executeQuery(`
+            SELECT dealYear, dealMonth, dealDay
+            FROM apt_deal_info
+            ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+            LIMIT 1
+        `);
+
+        let globalLatestDate = null;
+        if (globalLatestRows[0]) {
+            const { dealYear, dealMonth, dealDay } = globalLatestRows[0];
+            globalLatestDate = { dealYear, dealMonth, dealDay };
+            log(`전국 최신 거래일: ${dealYear}-${String(dealMonth).padStart(2, '0')}-${String(dealDay).padStart(2, '0')}`);
+        }
+
+        log(`캐시 갱신 대상: ${sidoList.length}개 지역`);
+
+        for (const sido of sidoList) {
+            await updateCacheForRegion(sido, globalLatestDate);
+        }
+
+        const cacheElapsed = ((Date.now() - cacheStartTime) / 1000).toFixed(1);
+        console.log(`
+[${new Date().toISOString()}] ✅ 대시보드 캐시 갱신 완료! (${cacheElapsed}초)
+`);
+
+    } catch (error) {
+        logError(`캐시 갱신 오류: ${error.message}`);
+    }
+}
+
+/**
+ * 특정 지역의 캐시 갱신
+ * @param {string} sido - 시도명 ('ALL' 또는 시도명)
+ * @param {object} globalLatestDate - 전국 최신 거래일 { dealYear, dealMonth, dealDay }
+ */
+async function updateCacheForRegion(sido, globalLatestDate) {
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    const regionJoin = sido !== 'ALL' ? `
+        JOIN (
+            SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2 
+            FROM apt_list WHERE as1 = ?
+        ) l ON d.sggCd = l.sggCode
+    ` : '';
+
+    const regionParams = sido !== 'ALL' ? [sido] : [];
+
+    try {
+        // 1. 최고 거래 지역
+        const topRegionQuery = sido !== 'ALL'
+            ? `SELECT CONCAT(l.as1, ' ', l.as2) as region, COUNT(*) as count
+               FROM apt_deal_info d ${regionJoin}
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY l.as1, l.as2 ORDER BY count DESC LIMIT 1`
+            : `SELECT CONCAT(l.as1, ' ', l.as2) as region, COUNT(*) as count
+               FROM apt_deal_info d
+               JOIN (SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2 FROM apt_list) l ON d.sggCd = l.sggCode
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY l.as1, l.as2 ORDER BY count DESC LIMIT 1`;
+
+        const [topRegionRows] = await executeQuery(topRegionQuery, regionParams);
+        const topRegion = topRegionRows[0] || { region: "데이터 없음", count: 0 };
+
+        // 2. 월간 거래량
+        const monthlyQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
+                              WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
+        const [monthlyRows] = await executeQuery(monthlyQuery, regionParams);
+
+        // 3. 일일 거래량 (전국 최신 거래일 기준으로 통일)
+        let todayVolume = 0;
+        let latestDateStr = null;
+
+        if (globalLatestDate) {
+            const { dealYear, dealMonth, dealDay } = globalLatestDate;
+            latestDateStr = `${dealYear}-${String(dealMonth).padStart(2, '0')}-${String(dealDay).padStart(2, '0')}`;
+
+            const dailyQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
+                               WHERE d.dealYear = ? AND d.dealMonth = ? AND d.dealDay = ?`;
+            const dailyParams = sido !== 'ALL' ? [...regionParams, dealYear, dealMonth, dealDay] : [dealYear, dealMonth, dealDay];
+            const [dailyRows] = await executeQuery(dailyQuery, dailyParams);
+            todayVolume = dailyRows[0]?.count || 0;
+        }
+
+        // 4. 거래 취소 건수
+        const cancelledQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
+                               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                               AND cdealType IS NOT NULL AND cdealType != ''`;
+        const [cancelledRows] = await executeQuery(cancelledQuery, regionParams);
+
+        // 캐시 저장
+        const cacheData = {
+            topRegion,
+            monthlyVolume: monthlyRows[0]?.count || 0,
+            todayVolume,
+            latestDate: latestDateStr,
+            cancelledCount: cancelledRows[0]?.count || 0
+        };
+
+        await executeQuery(`
+            INSERT INTO dashboard_stats_cache (region_code, stat_type, stat_value, latest_deal_date, calculated_at)
+            VALUES (?, 'dashboard', ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                stat_value = VALUES(stat_value),
+                latest_deal_date = VALUES(latest_deal_date),
+                calculated_at = VALUES(calculated_at)
+        `, [sido, JSON.stringify(cacheData), latestDateStr, now]);
+
+        log(`[캐시] ${sido}: 월간 ${cacheData.monthlyVolume}건, 일일 ${cacheData.todayVolume}건 (${latestDateStr})`);
+
+    } catch (error) {
+        logError(`[캐시] ${sido} 오류: ${error.message}`);
+    }
 }
 
 main().catch(err => {

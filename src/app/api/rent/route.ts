@@ -38,18 +38,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // 날짜 파싱 - 연/월/일 분리
-        const startParts = startDate.split('-');
-        const endParts = endDate.split('-');
-        const startYear = parseInt(startParts[0]);
-        const startMonth = parseInt(startParts[1]);
-        const startDay = parseInt(startParts[2]);
-        const endYear = parseInt(endParts[0]);
-        const endMonth = parseInt(endParts[1]);
-        const endDay = parseInt(endParts[2]);
-
         // apt_list 테이블을 통해 지역명 → sggCd 매핑 후 apt_rent_info 조회
-        // 최적화: dealYear, dealMonth, dealDay 개별 컬럼 비교로 인덱스 활용
+        // 최적화: dealDate 컬럼과 idx_rent_sgg_date 인덱스 활용
         let query = `
       SELECT
         r.id,
@@ -75,19 +65,12 @@ export async function GET(request: NextRequest) {
         FROM apt_list
         WHERE as1 = ? AND as2 = ?
       ) l ON r.sggCd = l.sggCode
-      WHERE r.dealYear >= ? AND r.dealYear <= ?
-        AND (
-          (r.dealYear > ? OR (r.dealYear = ? AND r.dealMonth > ?) OR (r.dealYear = ? AND r.dealMonth = ? AND r.dealDay >= ?))
-          AND
-          (r.dealYear < ? OR (r.dealYear = ? AND r.dealMonth < ?) OR (r.dealYear = ? AND r.dealMonth = ? AND r.dealDay <= ?))
-        )
+      WHERE r.dealDate >= ? AND r.dealDate <= ?
     `;
 
         const params: (string | number)[] = [
             sido, sigungu,
-            startYear, endYear,
-            startYear, startYear, startMonth, startYear, startMonth, startDay,
-            endYear, endYear, endMonth, endYear, endMonth, endDay
+            startDate, endDate
         ];
 
         // 동 필터 (선택)
@@ -104,7 +87,7 @@ export async function GET(request: NextRequest) {
 
         // limit 조정: aptName이 있으면 더 적은 데이터
         const limit = aptName ? 3000 : 5000;
-        query += ` ORDER BY r.dealYear DESC, r.dealMonth DESC, r.dealDay DESC LIMIT ${limit}`;
+        query += ` ORDER BY r.dealDate DESC LIMIT ${limit}`;
 
         const rows = await executeQuery(query, params) as RentRow[];
 

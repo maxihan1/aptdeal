@@ -24,6 +24,42 @@ export async function GET(request: Request) {
     const sido = searchParams.get('sido');
     const sigungu = searchParams.get('sigungu');
 
+    // 캐시 조회 (sigungu가 없는 경우만 캐시 사용)
+    if (!sigungu) {
+      const regionCode = sido || 'ALL';
+      try {
+        const cacheResult = await executeQuery(`
+          SELECT stat_value, calculated_at 
+          FROM dashboard_stats_cache 
+          WHERE region_code = ? AND stat_type = 'dashboard'
+          AND calculated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        `, [regionCode]);
+
+        // executeQuery는 [rows, fields]를 반환하거나 rows만 반환할 수 있음
+        const cacheRows = Array.isArray(cacheResult) ? cacheResult : [];
+
+        console.log(`[Cache] Region: ${regionCode}, Found: ${cacheRows.length} rows`);
+
+        if (cacheRows && cacheRows.length > 0) {
+          const firstRow = cacheRows[0] as { stat_value: string | object, calculated_at: Date };
+          // MySQL JSON 타입은 이미 객체로 반환될 수 있음
+          const cachedData = typeof firstRow.stat_value === 'string'
+            ? JSON.parse(firstRow.stat_value)
+            : firstRow.stat_value;
+          console.log(`[Cache] HIT for ${regionCode}`);
+          // 캐시된 데이터 그대로 반환 (trend, popularComplexes 포함)
+          return NextResponse.json({
+            ...cachedData,
+            fromCache: true
+          });
+        }
+        console.log(`[Cache] MISS for ${regionCode}`);
+      } catch (cacheError) {
+        // 캐시 테이블이 없거나 에러 시 무시하고 기존 로직 실행
+        console.log('Cache error:', cacheError);
+      }
+    }
+
     // Common join clause for region filtering
     const regionJoin = `
       JOIN (
@@ -39,7 +75,7 @@ export async function GET(request: Request) {
     if (sido) regionParams.push(sido);
     if (sigungu) regionParams.push(sigungu);
 
-    // 1. Top Trading Region (Global, Last 30 days)
+    // 1. Top Trading Region (Last 30 days) - 최고 거래량 지역
     // If global: show top Districts or Sidos? Assuming top "Sgg" (Regions)
     const topRegionQuery = `
       SELECT 
@@ -61,16 +97,37 @@ export async function GET(request: Request) {
       WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     `;
 
-    // 3. Latest Daily Volume (Smart "Today")
-    const latestVolumeQuery = `
-      SELECT dealDate, COUNT(*) as count
-      FROM apt_deal_info d
-      ${sido || sigungu ? regionJoin : ''}
-      WHERE dealDate = (SELECT MAX(dealDate) FROM apt_deal_info)
-      GROUP BY dealDate
-    `;
+    // 3. Latest Daily Volume - dealYear/Month/Day 기준 (한국 날짜)
+    // dealDate(UTC)와 dealYear/Month/Day가 1일 차이나므로 dealYear/Month/Day 사용
+    const latestDateQuery = sido || sigungu
+      ? `
+        SELECT dealYear, dealMonth, dealDay
+        FROM apt_deal_info d
+        ${regionJoin}
+        ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+        LIMIT 1
+      `
+      : `
+        SELECT dealYear, dealMonth, dealDay
+        FROM apt_deal_info
+        ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
+        LIMIT 1
+      `;
 
-    // 4. Cancelled Deals (Global, Last 30 days)
+    const latestVolumeQuery = sido || sigungu
+      ? `
+        SELECT COUNT(*) as count
+        FROM apt_deal_info d
+        ${regionJoin}
+        WHERE d.dealYear = ? AND d.dealMonth = ? AND d.dealDay = ?
+      `
+      : `
+        SELECT COUNT(*) as count
+        FROM apt_deal_info d
+        WHERE dealYear = ? AND dealMonth = ? AND dealDay = ?
+      `;
+
+    // 4. Cancelled Deals (Last 30 days)
     const cancelledQuery = `
       SELECT COUNT(*) as count
       FROM apt_deal_info d
@@ -127,14 +184,30 @@ export async function GET(request: Request) {
       LIMIT 5
     `;
 
-    const topRegionRows = await executeQuery(topRegionQuery, regionParams) as RegionResult[];
-    const monthlyVolumeRows = await executeQuery(monthlyVolumeQuery, (sido || sigungu) ? regionParams : []) as StatsResult[];
-    const latestVolumeRows = await executeQuery(latestVolumeQuery, (sido || sigungu) ? regionParams : []) as (StatsResult & { dealDate: Date })[];
-    const cancelledRows = await executeQuery(cancelledQuery, (sido || sigungu) ? regionParams : []) as StatsResult[];
-    // Trend Query uses the same regionParams if filtering is active
-    const trendRows = await executeQuery(trendQuery, (sido || sigungu) ? regionParams : []) as TrendResult[];
-    // Popular Complexes always uses regionJoin to get region name strings, so it needs params
-    const popularComplexRows = await executeQuery(popularComplexesQuery, regionParams) as (RegionResult & { aptNm: string })[];
+    // 병렬 실행으로 성능 개선 - 먼저 최신 날짜를 가져온 후 일일거래량 조회
+    const [topRegionRows, monthlyVolumeRows, latestDateResult, cancelledRows, trendRows, popularComplexRows] = await Promise.all([
+      executeQuery(topRegionQuery, regionParams) as Promise<RegionResult[]>,
+      executeQuery(monthlyVolumeQuery, (sido || sigungu) ? regionParams : []) as Promise<StatsResult[]>,
+      executeQuery(latestDateQuery, (sido || sigungu) ? regionParams : []) as Promise<{ dealYear: number, dealMonth: number, dealDay: number }[]>,
+      executeQuery(cancelledQuery, (sido || sigungu) ? regionParams : []) as Promise<StatsResult[]>,
+      executeQuery(trendQuery, (sido || sigungu) ? regionParams : []) as Promise<TrendResult[]>,
+      executeQuery(popularComplexesQuery, regionParams) as Promise<(RegionResult & { aptNm: string })[]>
+    ]);
+
+    // 최신 날짜로 일일 거래량 조회 (순차 실행 필요)
+    const latestDateRow = latestDateResult[0];
+    let latestVolumeRows: StatsResult[] = [];
+    let latestDateStr: string | null = null;
+
+    if (latestDateRow) {
+      const { dealYear, dealMonth, dealDay } = latestDateRow;
+      latestDateStr = `${dealYear}-${String(dealMonth).padStart(2, '0')}-${String(dealDay).padStart(2, '0')}`;
+
+      latestVolumeRows = await executeQuery(
+        latestVolumeQuery,
+        (sido || sigungu) ? [...regionParams, dealYear, dealMonth, dealDay] : [dealYear, dealMonth, dealDay]
+      ) as StatsResult[];
+    }
 
     // Helper to format region name (e.g. '경기도 용인기흥구 ...' -> '경기도 용인시 기흥구 ...')
     const formatRegionString = (fullRegion: string) => {
@@ -164,8 +237,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       topRegion: topRegion,
       monthlyVolume: monthlyVolumeRows[0]?.count || 0,
-      todayVolume: latestVolumeRows[0]?.count || 0, // Now represents latest available day
-      latestDate: latestVolumeRows[0]?.dealDate || null, // Front-end can display "12.07 기준"
+      todayVolume: latestVolumeRows[0]?.count || 0,
+      latestDate: latestDateStr, // YYYY-MM-DD 형식 문자열
       cancelledCount: cancelledRows[0]?.count || 0,
       trend: trendRows,
       popularComplexes: popularComplexes

@@ -163,6 +163,15 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
     if (!sido) {
       return;
     }
+
+    // 세종특별자치시는 시군구가 없으므로 "세종시"로 자동 설정
+    if (sido === "세종특별자치시") {
+      const sejongOption = [{ code: "세종시", name: "세종시" }];
+      setSigunguOptions(sejongOption);
+      setSigungu("세종시");
+      return;
+    }
+
     // 캐시에서 이미 해당 시도의 시군구 옵션이 있으면 바로 사용
     const cacheKey = `${CACHE_KEYS.SIGUNGU_OPTIONS}_${sido}`;
     const cached = localStorage.getItem(cacheKey);

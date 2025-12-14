@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/mysql';
 
+// 시도별 sggCd 접두사 맵 (성능 최적화용)
+const SIDO_SGG_PREFIX: Record<string, string> = {
+  '서울특별시': '11',
+  '부산광역시': '26',
+  '대구광역시': '27',
+  '인천광역시': '28',
+  '광주광역시': '29',
+  '대전광역시': '30',
+  '울산광역시': '31',
+  '세종특별자치시': '36',
+  '경기도': '41',
+  '강원특별자치도': '42',
+  '강원도': '42',
+  '충청북도': '43',
+  '충청남도': '44',
+  '전북특별자치도': '45',
+  '전라북도': '45',
+  '전라남도': '46',
+  '경상북도': '47',
+  '경상남도': '48',
+  '제주특별자치도': '50',
+};
+
 interface DealRow {
   id: number;
   aptNm: string;
@@ -70,11 +93,16 @@ export async function GET(request: NextRequest) {
               JOIN (
                   SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2
                   FROM apt_list
-                  WHERE as1 = ? AND as2 = ?
+                  WHERE as1 = ? ${sido === '세종특별자치시' ? '' : 'AND as2 = ?'}
               ) l ON d.sggCd = l.sggCode
               WHERE 1=1
             `;
-      newParams.push(sido, sigungu);
+      // 세종특별자치시는 sigungu 파라미터 불필요
+      if (sido === '세종특별자치시') {
+        newParams.push(sido);
+      } else {
+        newParams.push(sido, sigungu);
+      }
 
       if (startDate && endDate) {
         query += ` AND d.dealDate >= ? AND d.dealDate <= ? `;
@@ -96,7 +124,7 @@ export async function GET(request: NextRequest) {
       if (onlyCancelled) {
         query += " AND (d.cdealType = 'O' OR d.cdealType = 'Y') ";
       } else if (excludeCancelled) {
-        query += " AND (d.cdealType IS NULL OR d.cdealType = '') ";
+        query += " AND (d.cdealType IS NULL OR TRIM(d.cdealType) = '') ";
       }
 
       // Standard filtering needs order and limit
@@ -113,8 +141,19 @@ export async function GET(request: NextRequest) {
       const subQueryParams: (string | number)[] = [];
 
       if (startDate && endDate) {
-        subQueryWhere += ` AND dealDate >= ? AND dealDate <= ? `;
-        subQueryParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+        // 일일 조회(startDate == endDate)인 경우 dealYear/Month/Day로 필터링 (stats API와 일치)
+        if (startDate === endDate) {
+          const dateParts = startDate.split('-');
+          const year = parseInt(dateParts[0]);
+          const month = parseInt(dateParts[1]);
+          const day = parseInt(dateParts[2]);
+          subQueryWhere += ` AND dealYear = ? AND dealMonth = ? AND dealDay = ? `;
+          subQueryParams.push(year, month, day);
+        } else {
+          // 범위 조회는 dealDate 인덱스 활용
+          subQueryWhere += ` AND dealDate >= ? AND dealDate <= ? `;
+          subQueryParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+        }
       }
 
       // SIDO Filter for dashboard global filter (when NO Sigungu selected)
@@ -129,65 +168,36 @@ export async function GET(request: NextRequest) {
       // We need to implement Sido filtering here in CASE 2.
 
       if (sido && !sigungu) {
-        // We need to match Sido to SggCodes or find a way to filter.
-        // Since `apt_list` has `as1`, we can get valid SggCodes.
-        // But that's complex to inject into subquery.
-        // Alternative: `WHERE sggCd LIKE '11%'` etc. (Use index if prefix match?)
-        // `sggCd` is varchar(5) or (10).
-        // If we map Sido content to Code prefix? e.g. Seoul=11, Busan=26...
-        // We don't have that map hardcoded here.
-        // Querying `apt_list` for sggCodes matching `as1`?
-        // Let's do a subquery or join inside the subquery?
-        // "SELECT id FROM apt_deal_info WHERE sggCd IN (SELECT sggCode FROM apt_list WHERE as1=?)"
-        // This might be slow if subquery is re-run.
-        // Efficient way: JOIN in the subquery?
-        // `JOIN apt_deal_info d ON ... JOIN apt_list l ON ... WHERE l.as1 = ?`
-        // We need to restructure the subquery heavily or use a cached prefix map.
-        // Given the environment, let's keep it simple: 
-        // If Sido is selected, we really should have been passing it.
-        // Let's try to add the Sido filter to the subquery if possible.
-        // Actually, if we just let the main query filter it, the LIMIT in subquery will chop off relevant data.
-        // So filtering MUST happen in subquery.
-
-        // Let's rely on the user passing `sigungu` or if it's GLOBAL Sido, we might need a `sido` param logic here.
-        // The current implementation IGNORES `sido` if `sigungu` is missing in CASE 2 (except for what I'm about to add).
-        // Let's look up sggPrefix? 
-        // `apt_list` has `bjdCode`. `sggCode` is `LEFT(bjdCode, 5)`. 
-        // If we query `SELECT DISTINCT LEFT(bjdCode, 2) FROM apt_list WHERE as1 = ?` we get the 2-digit prefix.
-        // But we can't do async inside this synchronous block easily without refactoring or ignoring it.
-        // WAIT! The current `page.tsx` logic sends `sido` code (e.g. '11', '26')?
-        // Let's check `page.tsx`:
-        // `setGlobalSido` -> `axios.get('/api/regions/provinces')`.
-        // `provinces` usually return codes like '11', '26'.
-        // So `sido` param IS the code (e.g. '11' for Seoul).
-        // So we can use `sggCd LIKE '11%'`.
-
+        // sido가 숫자 코드(예: '11')인 경우 직접 LIKE 사용
         if (sido.length === 2 && !isNaN(Number(sido))) {
           subQueryWhere += ` AND sggCd LIKE '${sido}%' `;
+        } else {
+          // sido가 이름인 경우 - 맵에서 접두사 조회
+          const prefix = SIDO_SGG_PREFIX[sido];
+          if (prefix) {
+            subQueryWhere += ` AND sggCd LIKE '${prefix}%' `;
+          }
         }
       }
 
       if (onlyCancelled) {
         subQueryWhere += " AND (cdealType = 'O' OR cdealType = 'Y') ";
       } else if (excludeCancelled) {
-        subQueryWhere += " AND (cdealType IS NULL OR cdealType = '') ";
+        // cdealType이 NULL, 빈 문자열, 또는 공백만 있는 경우 제외
+        subQueryWhere += " AND (cdealType IS NULL OR TRIM(cdealType) = '') ";
       }
 
       // 서브쿼리: ID만 빠르게 추출 (인덱스 활용)
-      // LIMIT ? inside subquery sometimes causes 'Incorrect arguments' in prepared statements
-      // So we interpolate the number directly after ensuring it is safe.
       const safeLimit = Number.isInteger(limit) ? limit : 10000;
       const safeOffset = Number.isInteger(offset) ? offset : 0;
 
       const subQuery = `
-            SELECT id 
-            FROM apt_deal_info 
-            WHERE ${subQueryWhere}
-            ORDER BY dealDate DESC
-            LIMIT ${safeLimit} OFFSET ${safeOffset}
-        `;
-      // remove limit from params as it is now interpolated
-      // subQueryParams.push(limit); -> removed
+          SELECT id 
+          FROM apt_deal_info 
+          WHERE ${subQueryWhere}
+          ORDER BY dealDate DESC
+          LIMIT ${safeLimit} OFFSET ${safeOffset}
+      `;
 
       query = `
             SELECT
@@ -240,7 +250,7 @@ export async function GET(request: NextRequest) {
     // 프론트엔드 Deal 인터페이스에 맞게 변환
     const deals = rows.map((row, index) => ({
       id: row.id?.toString() || `deal-${index}`,
-      region: `${row.as1} ${row.as2} ${row.umdNm || ''}`.trim(),
+      region: `${row.as1} ${row.as2 || ''} ${row.umdNm || ''}`.replace(/\s+/g, ' ').trim(),
       address: row.jibun || '',
       area: Number(row.excluUseAr) || 0,
       price: Number(row.dealAmount) || 0,

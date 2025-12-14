@@ -11,6 +11,7 @@ interface TrendChartProps {
 
 export function TrendChart({ globalSido }: TrendChartProps) {
     const [data, setData] = useState<{ date: string; average: number }[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
 
     // Region Filter States
     const [sido, setSido] = useState<string>("서울특별시");
@@ -58,6 +59,7 @@ export function TrendChart({ globalSido }: TrendChartProps) {
 
     // Fetch Trend Data
     useEffect(() => {
+        setLoading(true);
         const params: Record<string, string> = {};
         if (sido && sido !== "ALL_SIDO") {
             params.sido = sido;
@@ -69,11 +71,21 @@ export function TrendChart({ globalSido }: TrendChartProps) {
             params.pyeong = pyeong;
         }
 
-        axios.get('/api/stats', { params }).then(res => {
-            if (res.data.trend) {
-                setData(res.data.trend);
-            }
-        });
+        axios.get('/api/stats', { params })
+            .then(res => {
+                if (res.data.trend) {
+                    setData(res.data.trend);
+                } else {
+                    setData([]);
+                }
+            })
+            .catch(err => {
+                console.error("Trend data fetch error:", err);
+                setData([]);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }, [sido, sigungu, pyeong]);
 
     return (
@@ -123,8 +135,10 @@ export function TrendChart({ globalSido }: TrendChartProps) {
                 </div>
             </div>
 
-            {data.length === 0 ? (
+            {loading ? (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">데이터 로딩 중...</div>
+            ) : data.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">선택한 조건의 거래 데이터가 없습니다.</div>
             ) : (
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">

@@ -1,0 +1,22 @@
+[dotenv@17.2.1] injecting env (9) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+=== 전월세 비정상 보증금 검증 ===
+
+⏳ 검증 중... (인덱스 적용됨, 빠르게 완료 예정)
+
+1. 보증금 < 100만원 (의심 대상): 6,803,748 건
+/Users/maxi.moff/APT value/web/node_modules/mysql2/lib/promise/connection.js:47
+    const localErr = new Error();
+                     ^
+
+Error: Connection lost: The server closed the connection.
+    at PromiseConnection.execute (/Users/maxi.moff/APT value/web/node_modules/mysql2/lib/promise/connection.js:47:22)
+    at [eval]:22:30
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'PROTOCOL_CONNECTION_LOST',
+  errno: undefined,
+  sql: undefined,
+  sqlState: undefined,
+  sqlMessage: undefined
+}
+
+Node.js v24.5.0

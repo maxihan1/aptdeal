@@ -18,17 +18,32 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // apt_list 테이블에서 읍면동 목록 조회
-        const query = `
-      SELECT DISTINCT as3 
-      FROM apt_list 
-      WHERE as1 = ? 
-        AND as2 = ?
-        AND as3 IS NOT NULL AND as3 != ''
-      ORDER BY as3
-    `;
+        // 세종특별자치시는 as2가 없으므로 특별 처리
+        let query: string;
+        let params: string[];
 
-        const rows = await executeQuery(query, [province, city]) as RegionRow[];
+        if (province === '세종특별자치시' || city === '세종시') {
+            query = `
+                SELECT DISTINCT as3 
+                FROM apt_list 
+                WHERE as1 = '세종특별자치시'
+                  AND as3 IS NOT NULL AND as3 != ''
+                ORDER BY as3
+            `;
+            params = [];
+        } else {
+            query = `
+                SELECT DISTINCT as3 
+                FROM apt_list 
+                WHERE as1 = ? 
+                  AND as2 = ?
+                  AND as3 IS NOT NULL AND as3 != ''
+                ORDER BY as3
+            `;
+            params = [province, city];
+        }
+
+        const rows = await executeQuery(query, params) as RegionRow[];
 
         // 프론트엔드 형식에 맞게 변환
         const neighborhoods = rows.map(row => ({

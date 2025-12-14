@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from "react"
 import { TrendChart } from "@/components/dashboard/trend-chart"
 import PopularComplexes from "@/components/dashboard/popular-complexes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Building, AlertCircle, MapPin, BarChart3, Building2 } from "lucide-react"
+import { TrendingUp, Building, AlertCircle, MapPin, BarChart3, Building2, Loader2 } from "lucide-react"
 import axios from "axios"
 import { format } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -22,6 +22,7 @@ export default function Home() {
     latestDate: null as string | null,
     cancelledCount: 0
   });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Dialog State with Pagination
   const [dialogState, setDialogState] = useState<{
@@ -53,13 +54,18 @@ export default function Home() {
 
   // Fetch Stats (KPIs)
   useEffect(() => {
+    setStatsLoading(true);
     const params: Record<string, string> = {};
     if (globalSido && globalSido !== "ALL") {
       params.sido = globalSido;
     }
-    axios.get('/api/stats', { params }).then(res => {
-      setStats(res.data);
-    });
+    axios.get('/api/stats', { params })
+      .then(res => {
+        setStats(res.data);
+      })
+      .finally(() => {
+        setStatsLoading(false);
+      });
   }, [globalSido]);
 
   // Helper to fetch details (deals)
@@ -134,7 +140,7 @@ export default function Home() {
       let title = "";
 
       if (type === 'topRegion') {
-        title = "최고 거래 지역";
+        title = "최고 거래량 지역";
         dialogType = 'ranking';
         // For Ranking, we currently fetch all at once or restricted top 100.
         // If sorting filter applies, pass it.
@@ -209,15 +215,24 @@ export default function Home() {
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            {globalSido === 'ALL' ? '최고 거래 지역' : '최고 거래 자치구'}
+            {globalSido === 'ALL' ? '최고 거래량 지역' : '최고 거래량 자치구'}
           </CardTitle>
-          <MapPin className="h-4 w-4 text-primary" />
+          {statsLoading ? <Loader2 className="h-4 w-4 text-primary animate-spin" /> : <MapPin className="h-4 w-4 text-primary" />}
         </CardHeader>
         <CardContent>
-          <div className="text-xl font-bold truncate text-primary">{stats.topRegion.region}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.topRegion.count.toLocaleString()}건 거래 (30일)
-          </p>
+          {statsLoading ? (
+            <div className="space-y-2">
+              <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            </div>
+          ) : (
+            <>
+              <div className="text-xl font-bold truncate text-primary">{stats.topRegion.region || '데이터 없음'}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.topRegion.count.toLocaleString()}건 거래 (30일)
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -230,13 +245,22 @@ export default function Home() {
           <CardTitle className="text-sm font-medium">
             월간 거래량
           </CardTitle>
-          <TrendingUp className="h-4 w-4 text-green-500" />
+          {statsLoading ? <Loader2 className="h-4 w-4 text-green-500 animate-spin" /> : <TrendingUp className="h-4 w-4 text-green-500" />}
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.monthlyVolume.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
-          <p className="text-xs text-muted-foreground">
-            최근 30일 기준
-          </p>
+          {statsLoading ? (
+            <div className="space-y-2">
+              <div className="h-8 w-24 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+            </div>
+          ) : (
+            <>
+              <div className="text-2xl font-bold">{stats.monthlyVolume.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
+              <p className="text-xs text-muted-foreground">
+                최근 30일 기준
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -249,13 +273,22 @@ export default function Home() {
           <CardTitle className="text-sm font-medium">
             일일 거래량
           </CardTitle>
-          <Building className="h-4 w-4 text-blue-500" />
+          {statsLoading ? <Loader2 className="h-4 w-4 text-blue-500 animate-spin" /> : <Building className="h-4 w-4 text-blue-500" />}
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.todayVolume.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
-          <p className="text-xs text-muted-foreground">
-            {stats.latestDate ? `${format(new Date(stats.latestDate), 'MM.dd')} 기준` : '최신 데이터'}
-          </p>
+          {statsLoading ? (
+            <div className="space-y-2">
+              <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+            </div>
+          ) : (
+            <>
+              <div className="text-2xl font-bold">{stats.todayVolume.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
+              <p className="text-xs text-muted-foreground">
+                {stats.latestDate ? `${format(new Date(stats.latestDate), 'MM.dd')} 기준` : '최신 데이터'}
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -268,13 +301,22 @@ export default function Home() {
           <CardTitle className="text-sm font-medium">
             거래 취소
           </CardTitle>
-          <AlertCircle className="h-4 w-4 text-orange-500" />
+          {statsLoading ? <Loader2 className="h-4 w-4 text-orange-500 animate-spin" /> : <AlertCircle className="h-4 w-4 text-orange-500" />}
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-orange-500">{stats.cancelledCount.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
-          <p className="text-xs text-muted-foreground">
-            최근 30일 기준
-          </p>
+          {statsLoading ? (
+            <div className="space-y-2">
+              <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+            </div>
+          ) : (
+            <>
+              <div className="text-2xl font-bold text-orange-500">{stats.cancelledCount.toLocaleString()}<span className="text-base font-normal text-muted-foreground">건</span></div>
+              <p className="text-xs text-muted-foreground">
+                최근 30일 기준
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

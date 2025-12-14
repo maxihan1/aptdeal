@@ -1,0 +1,23 @@
+[dotenv@17.2.1] injecting env (9) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+=== 전세 보증금 x1000 수정 ===
+
+조건: monthlyRent = 0 AND deposit < 100 AND deposit > 0
+대상: 약 4,343,670건
+
+⏳ UPDATE 실행 중...
+/Users/maxi.moff/APT value/web/node_modules/mysql2/lib/promise/connection.js:47
+    const localErr = new Error();
+                     ^
+
+Error: read ETIMEDOUT
+    at PromiseConnection.execute (/Users/maxi.moff/APT value/web/node_modules/mysql2/lib/promise/connection.js:47:22)
+    at [eval]:22:33
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ETIMEDOUT',
+  errno: -60,
+  sql: undefined,
+  sqlState: undefined,
+  sqlMessage: undefined
+}
+
+Node.js v24.5.0

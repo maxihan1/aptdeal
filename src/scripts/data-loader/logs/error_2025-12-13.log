@@ -1,0 +1,53 @@
+[2025-12-13T22:49:38.465Z] [deal] 서울특별시 강남구 2025-12 오류: target must be an object
+[2025-12-13T22:49:39.047Z] [rent] 서울특별시 강남구 2025-12 오류: target must be an object
+[2025-12-13T22:49:39.516Z] [deal] 서울특별시 강동구 2025-12 오류: target must be an object
+[2025-12-13T22:49:40.085Z] [rent] 서울특별시 강동구 2025-12 오류: target must be an object
+[2025-12-13T22:49:40.567Z] [deal] 서울특별시 강북구 2025-12 오류: target must be an object
+[2025-12-13T22:49:41.081Z] [rent] 서울특별시 강북구 2025-12 오류: target must be an object
+[2025-12-13T22:49:41.591Z] [deal] 서울특별시 강서구 2025-12 오류: target must be an object
+[2025-12-13T22:49:42.148Z] [rent] 서울특별시 강서구 2025-12 오류: target must be an object
+[2025-12-13T22:49:42.827Z] [deal] 서울특별시 관악구 2025-12 오류: target must be an object
+[2025-12-13T22:49:43.910Z] [rent] 서울특별시 관악구 2025-12 오류: target must be an object
+[2025-12-13T22:49:46.006Z] [rent] 서울특별시 광진구 2025-12 오류: target must be an object
+[2025-12-13T22:49:46.917Z] [deal] 서울특별시 구로구 2025-12 오류: target must be an object
+[2025-12-13T22:49:47.782Z] [rent] 서울특별시 구로구 2025-12 오류: target must be an object
+[2025-12-13T22:49:48.248Z] [deal] 서울특별시 금천구 2025-12 오류: target must be an object
+[2025-12-13T22:49:49.256Z] [deal] 서울특별시 노원구 2025-12 오류: target must be an object
+[2025-12-13T22:49:49.811Z] [rent] 서울특별시 노원구 2025-12 오류: target must be an object
+[2025-12-13T22:49:50.571Z] [deal] 서울특별시 도봉구 2025-12 오류: target must be an object
+[2025-12-13T22:49:51.116Z] [rent] 서울특별시 도봉구 2025-12 오류: target must be an object
+[2025-12-13T22:49:51.587Z] [deal] 서울특별시 동대문구 2025-12 오류: target must be an object
+[2025-12-13T22:49:52.349Z] [rent] 서울특별시 동대문구 2025-12 오류: target must be an object
+[2025-12-13T22:49:52.827Z] [deal] 서울특별시 동작구 2025-12 오류: target must be an object
+[2025-12-13T22:49:53.360Z] [rent] 서울특별시 동작구 2025-12 오류: target must be an object
+[2025-12-13T22:49:53.833Z] [deal] 서울특별시 마포구 2025-12 오류: target must be an object
+[2025-12-13T22:49:55.074Z] [rent] 서울특별시 마포구 2025-12 오류: target must be an object
+[2025-12-13T22:49:55.601Z] [deal] 서울특별시 서대문구 2025-12 오류: target must be an object
+[2025-12-13T22:49:56.121Z] [rent] 서울특별시 서대문구 2025-12 오류: target must be an object
+[2025-12-13T22:49:57.566Z] [deal] 서울특별시 서초구 2025-12 오류: target must be an object
+[2025-12-13T22:49:58.120Z] [rent] 서울특별시 서초구 2025-12 오류: target must be an object
+[2025-12-13T22:49:59.543Z] [deal] 서울특별시 성동구 2025-12 오류: target must be an object
+[2025-12-13T22:50:00.067Z] [rent] 서울특별시 성동구 2025-12 오류: target must be an object
+[2025-12-13T22:50:01.042Z] [deal] 서울특별시 성북구 2025-12 오류: target must be an object
+[2025-12-13T22:50:02.036Z] [rent] 서울특별시 성북구 2025-12 오류: target must be an object
+[2025-12-13T22:50:02.926Z] [deal] 서울특별시 송파구 2025-12 오류: target must be an object
+[2025-12-13T22:50:03.958Z] [rent] 서울특별시 송파구 2025-12 오류: target must be an object
+[2025-12-13T22:50:55.165Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.185Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.198Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.215Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.231Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.251Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.267Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.286Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.300Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.342Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.378Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:55.402Z] 삽입 오류: Unknown column 'roadNm' in 'field list'
+[2025-12-13T22:50:57.953Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:57.973Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:57.995Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:58.013Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:58.028Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:58.043Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
+[2025-12-13T22:50:58.059Z] 삽입 오류: Unknown column 'previousDeposit' in 'field list'
