@@ -95,7 +95,7 @@ export function DealCard({ deal }: DealCardProps) {
                         )}
                     </div>
                     <div className="text-xs font-medium text-muted-foreground text-right">
-                        {deal.area}㎡ <span className="text-[10px]">({Math.round(deal.area / 3.3)}평)</span>
+                        {deal.area}㎡ <span className="text-[10px]">({Math.round(deal.area / 2.48)}평)</span>
                     </div>
                 </div>
 

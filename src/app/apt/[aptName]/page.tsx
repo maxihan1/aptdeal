@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import ComplexDetail, { ComplexInfo, AreaDealData } from "@/components/ComplexDetail";
+import ComplexDetail, { ComplexInfo, AreaDealData, Deal as ComplexDeal } from "@/components/ComplexDetail";
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
 
@@ -84,6 +84,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
 
   const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}`;
   const [areaDealData, setAreaDealData] = useState<AreaDealData[]>([]);
+  const [filteredDeals, setFilteredDeals] = useState<ComplexDeal[]>([]);
   const [info, setInfo] = useState<ComplexInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -215,6 +216,24 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         .sort((a, b) => parseFloat(a.area) - parseFloat(b.area));
       setAreaDealData(areaDealData);
 
+      // 거래 내역 리스트용 데이터 저장
+      const dealsForList: ComplexDeal[] = filteredDeals.map((deal, index) => ({
+        id: deal.id || `deal-${index}`,
+        date: deal.date,
+        area: Number(deal.area),
+        floor: typeof deal.floor === 'number' ? deal.floor : Number(deal.floor) || 0,
+        price: Number(deal.price),
+        aptDong: deal.aptDong,
+        cdealType: deal.cdealType,
+        tradeType: deal.tradeType || deal.dealingGbn,
+        dealingGbn: deal.dealingGbn,
+        deposit: deal.deposit,
+        monthlyRent: deal.monthlyRent,
+        rent: deal.rent,
+        contractType: deal.contractType,
+      }));
+      setFilteredDeals(dealsForList);
+
       // **info 객체에 옵션 포함**
       // 단지 상세 정보 호출
       let detailedInfo: any = {};
@@ -283,6 +302,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             info={info}
             areas={["전체", ...areaDealData.map((a) => a.area)]}
             areaDealData={areaDealData}
+            deals={filteredDeals}
+            dealType={dealType as "trade" | "rent"}
           />
         </main>
       ) : (

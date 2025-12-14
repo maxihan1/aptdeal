@@ -91,7 +91,7 @@ export function DetailDialog({ open, onOpenChange, title, type, data, loading, o
                                                 <div className="font-bold text-base truncate flex items-center gap-2">
                                                     {row.aptName}
                                                     <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                                        {Math.round(row.area / 3.3058)}평
+                                                        {Math.round(row.area / 2.48)}평
                                                     </span>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground truncate">{row.region}</div>

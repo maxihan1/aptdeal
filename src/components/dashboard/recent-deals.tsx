@@ -46,7 +46,7 @@ export function RecentDeals() {
                     <div className="ml-4 space-y-1">
                         <p className="text-sm font-medium leading-none">{deal.aptName}</p>
                         <p className="text-xs text-muted-foreground w-40 truncate">
-                            {deal.region} · {Math.round(deal.area / 3.3)}평 ({deal.area}㎡)
+                            {deal.region} · {Math.round(deal.area / 2.48)}평 ({deal.area}㎡)
                         </p>
                     </div>
                     <div className="ml-auto font-medium text-xs text-right min-w-[100px]">

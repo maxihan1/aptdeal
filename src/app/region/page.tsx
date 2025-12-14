@@ -448,7 +448,7 @@ function RegionPage() {
                     <SelectTrigger><SelectValue placeholder="전체 면적" /></SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       <SelectItem value="all">전체 면적</SelectItem>
-                      {availableAreas.map(a => <SelectItem key={a} value={a.toString()}>{a}㎡</SelectItem>)}
+                      {availableAreas.map(a => <SelectItem key={a} value={a.toString()}>{a}㎡ ({Math.round(a / 2.48)}평)</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -577,7 +577,7 @@ function RegionPage() {
                                         {deal.aptName}
                                         {isCancelled && <span className="ml-1 text-xs text-red-500 font-normal">[취소]</span>}
                                       </td>
-                                      <td className="py-2 text-center px-2">{deal.area}㎡</td>
+                                      <td className="py-2 text-center px-2">{deal.area}㎡ <span className="text-muted-foreground">({Math.round(deal.area / 2.48)}평)</span></td>
                                       <td className={`py-2 text-center font-bold px-2 ${isCancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>{formatPrice(deal.deposit)}</td>
                                       <td className="py-2 text-center px-2">{deal.rent ? deal.rent.toLocaleString() + '만원' : '전세'}</td>
                                       <td className="py-2 text-center px-2">{deal.date}</td>
@@ -590,7 +590,7 @@ function RegionPage() {
                                         {deal.aptName}
                                         {isCancelled && <span className="ml-1 text-xs text-red-500 font-normal">[취소]</span>}
                                       </td>
-                                      <td className="py-2 text-center px-2">{deal.area}㎡</td>
+                                      <td className="py-2 text-center px-2">{deal.area}㎡ <span className="text-muted-foreground">({Math.round(deal.area / 2.48)}평)</span></td>
                                       <td className="py-2 text-center px-2">{deal.aptDong || '-'}</td>
                                       <td className="py-2 text-center px-2">{deal.floor}층</td>
                                       <td className={`py-2 text-center font-bold px-2 ${isCancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>{formatPrice(deal.price)}</td>

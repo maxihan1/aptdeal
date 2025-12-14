@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { MapPin, BarChart, ArrowLeft, Home } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PriceChart } from "./complex/price-chart";
+import { DealList } from "./complex/deal-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -56,10 +57,29 @@ export type AreaDealData = {
   }[];
 };
 
+// 거래 데이터 타입 (DealList용)
+export interface Deal {
+  id?: string;
+  date: string;
+  area: number;
+  floor: number | string;
+  price: number;
+  aptDong?: string;
+  cdealType?: string;
+  tradeType?: string;
+  dealingGbn?: string;
+  deposit?: number;
+  monthlyRent?: number;
+  rent?: number;
+  contractType?: string;
+}
+
 interface ComplexDetailProps {
   info: ComplexInfo;
   areas: string[]; // 예: ["전체", "59㎡", "84㎡", ...]
   areaDealData: AreaDealData[]; // 면적별 거래 데이터
+  deals?: Deal[]; // 거래 내역 리스트용
+  dealType?: "trade" | "rent"; // 거래 유형
 }
 
 function InfoItem({ label, value, icon }: { label: string, value: string, icon: string }) {
@@ -74,7 +94,7 @@ function InfoItem({ label, value, icon }: { label: string, value: string, icon: 
   );
 }
 
-const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => {
+const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals = [], dealType: propDealType }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedArea, setSelectedArea] = React.useState("전체");
@@ -153,7 +173,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     const allPyeongs = targetData.flatMap(a => {
       const areaNum = parseFloat(a.area.replace('㎡', ''));
       if (!areaNum) return [];
-      return a.prices.map(p => p.price / (areaNum / 3.3058));
+      return a.prices.map(p => p.price / (areaNum / 2.48)); // 공급면적 기준 평당가
     });
     const avgPerPyeong = allPyeongs.length ? Math.round(allPyeongs.reduce((a, b) => a + b, 0) / allPyeongs.length) : 0;
 
@@ -165,7 +185,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
     return processedData.map(area => {
       const areaNum = parseFloat(area.area.replace('㎡', ''));
       const avg = area.prices.length ? Math.round(area.prices.reduce((a, b) => a + b.price, 0) / area.prices.length) : 0;
-      const avgPerPyeong = areaNum ? Math.round(avg / (areaNum / 3.3058)) : 0;
+      const avgPerPyeong = areaNum ? Math.round(avg / (areaNum / 2.48)) : 0; // 공급면적 기준
       return {
         area: area.area,
         count: area.prices.length,
@@ -321,7 +341,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-10 rounded-full transition-transform group-hover:scale-y-110" style={{ backgroundColor: areaColors[stat.area] }} />
                       <div>
-                        <div className="font-bold text-lg">{stat.area}</div>
+                        <div className="font-bold text-lg">{stat.area} <span className="font-normal text-sm text-muted-foreground">({Math.round(parseFloat(stat.area) / 2.48)}평)</span></div>
                         <div className="text-xs text-muted-foreground">{stat.count}건 거래</div>
                       </div>
                     </div>
@@ -363,7 +383,7 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                   <SelectContent>
                     <SelectItem value="전체">전체 면적</SelectItem>
                     {areaStats.map(s => (
-                      <SelectItem key={s.area} value={s.area}>{s.area}</SelectItem>
+                      <SelectItem key={s.area} value={s.area}>{s.area} ({Math.round(parseFloat(s.area) / 2.48)}평)</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -372,6 +392,18 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData }) => 
                 <PriceChart data={chartData} areas={targetAreas} colors={areaColors} />
               </div>
             </div>
+
+            {/* 거래 내역 리스트 */}
+            {deals.length > 0 && (
+              <div className="space-y-4">
+                <DealList
+                  deals={deals}
+                  dealType={propDealType || (isRent ? 'rent' : 'trade')}
+                  selectedArea={selectedArea}
+                  pageSize={15}
+                />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="basic" className="space-y-6 animate-in fade-in-50 duration-500">

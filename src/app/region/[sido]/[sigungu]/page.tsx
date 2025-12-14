@@ -311,7 +311,7 @@ function SemanticRegionContent() {
                                                             {deal.aptName}
                                                             {isCancelled && <span className="ml-1 text-xs text-red-500 font-normal">[취소]</span>}
                                                         </td>
-                                                        <td className="py-2 text-center px-2">{deal.area}㎡</td>
+                                                        <td className="py-2 text-center px-2">{deal.area}㎡ <span className="text-muted-foreground">({Math.round(deal.area / 2.48)}평)</span></td>
                                                         {dealType === 'rent' ? (
                                                             <>
                                                                 <td className={`py-2 text-center font-bold px-2 ${isCancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>
