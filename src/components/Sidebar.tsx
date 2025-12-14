@@ -69,6 +69,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   const [startDate, setStartDate] = useState<string>(defaultDates.start);
   const [endDate, setEndDate] = useState<string>(defaultDates.end);
   const [dealType, setDealType] = useState<"trade" | "rent">("trade");
+  const [showSigunguAlert, setShowSigunguAlert] = useState(false); // 시군구 선택 안내 모달
 
   // 마운트 완료 플래그 (hydration 이후에만 localStorage 읽기)
   const [isMounted, setIsMounted] = useState(false);
@@ -161,6 +162,9 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   // 시군구 불러오기 (캐시 활용)
   useEffect(() => {
     if (!sido) {
+      setSigunguOptions([]);
+      setSigungu("ALL");
+      setDong("ALL");
       return;
     }
 
@@ -171,6 +175,10 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
       setSigungu("세종시");
       return;
     }
+
+    // 세종 외 시도 변경 시: 시군구/읍면동 초기화
+    setSigungu("ALL");
+    setDong("ALL");
 
     // 캐시에서 이미 해당 시도의 시군구 옵션이 있으면 바로 사용
     const cacheKey = `${CACHE_KEYS.SIGUNGU_OPTIONS}_${sido}`;
@@ -252,8 +260,11 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   // 조회 버튼 클릭 시 URL 이동
   const handleSearch = () => {
     const messages: string[] = [];
-    if (!sido || !sigungu) {
-      messages.push("시도와 시군구를 모두 선택해 주세요.");
+    if (!sido) {
+      messages.push("시도를 선택해 주세요.");
+    }
+    if (!sigungu || sigungu === "ALL") {
+      messages.push("시군구를 선택해 주세요.");
     }
     if (!startDate || !endDate) {
       messages.push("시작일과 종료일을 모두 선택해 주세요.");
@@ -286,6 +297,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   // 즐겨찾기에서 선택 버튼 클릭 시 예약
   const handleFavoriteSelect = (favCode: string) => {
     const [sidoCode, sigunguCode, dongCode] = favCode.split("-");
+    console.log('[Favorite Select]', { favCode, sidoCode, sigunguCode, dongCode });
     setPendingSelect({
       sido: sidoCode,
       sigungu: sigunguCode,
@@ -303,7 +315,14 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
   // 시군구 옵션 준비 시 자동 선택
   useEffect(() => {
     if (pendingSelect && sigunguOptions.length > 0 && sido === pendingSelect.sido) {
-      if (sigungu !== pendingSelect.sigungu) setSigungu(pendingSelect.sigungu);
+      console.log('[Sigungu Auto-Select]', { pendingSelect, sigunguOptions: sigunguOptions.map(o => o.code), sido, sigungu });
+      // 옵션에 해당 시군구가 있는지 확인 (code 또는 name으로 매칭)
+      const found = sigunguOptions.find(opt => opt.code === pendingSelect.sigungu || opt.name === pendingSelect.sigungu);
+      console.log('[Sigungu Found]', found);
+      if (found && sigungu !== found.code) {
+        // name으로 저장된 경우에도 code로 설정해야 Select가 인식함
+        setSigungu(found.code);
+      }
     }
   }, [pendingSelect, sigunguOptions, sido, sigungu]);
 
@@ -377,7 +396,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-3 pb-24 space-y-3">
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <span className="text-base">🔍</span>
@@ -401,6 +420,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
                   <SelectValue placeholder="시군 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL">전체</SelectItem>
                   {sigunguOptions.map(opt => (
                     <SelectItem key={opt.code} value={opt.code}>{opt.name}</SelectItem>
                   ))}
@@ -513,7 +533,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
             <span className="text-base">⭐</span>
             <h2 className="text-sm font-semibold text-foreground">관심지역</h2>
           </div>
-          <div className="p-4 max-h-64 overflow-y-auto">
+          <div className="p-4">
             {favorites.length === 0 ? (
               <div className="text-muted-foreground text-sm text-center py-4">등록된 관심지역이 없습니다.</div>
             ) : (
