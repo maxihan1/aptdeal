@@ -1,9 +1,0 @@
-[dotenv@17.2.1] injecting env (9) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
-
-============================================================
-  비정상 가격 보정 (×1000)
-  조건: dealAmount < 1000 AND dealAmount > 0
-  동작: dealAmount = dealAmount * 1000
-============================================================
-
-오류 발생: Duplicate entry '51190-태백황지청솔-38.37-8-2025-8-2-5000' for key 'apt_deal_info.uk_deal_unique'

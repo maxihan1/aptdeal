@@ -1,5 +1,0 @@
-[dotenv@17.2.1] injecting env (9) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
-[dotenv@17.2.1] injecting env (0) from .env.local -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
-Found 252 regions to process.
-
-Cleanup Finished. Total deleted duplicates: 0
