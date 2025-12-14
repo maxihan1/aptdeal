@@ -93,7 +93,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       console.log('fetchDeals 호출');
       if (dealCache[cacheKey]) {
         console.log('dealCache hit');
-        processDeals(dealCache[cacheKey]);
+        await processDeals(dealCache[cacheKey]);
         setLoading(false);
         return;
       }
@@ -108,7 +108,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       // 2. 캐싱
       dealCache[cacheKey] = deals;
       console.log('processDeals 호출 전');
-      processDeals(deals);
+      await processDeals(deals);
       console.log('processDeals 호출 후');
       setLoading(false);
     }
@@ -306,11 +306,11 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             dealType={dealType as "trade" | "rent"}
           />
         </main>
-      ) : (
+      ) : !loading ? (
         <div className="flex-1 flex items-center justify-center py-16">
           <p className="text-muted-foreground">단지 정보를 불러올 수 없습니다.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
