@@ -198,9 +198,13 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
 
   // 읍면동 불러오기 (캐시 활용)
   useEffect(() => {
-    if (!sigungu || !sido) {
+    if (!sigungu || !sido || sigungu === "ALL") {
+      setDongOptions([]);
       return;
     }
+
+    // 시군구 변경 시 읍면동을 "전체"로 초기화
+    setDong("ALL");
     // 캐시에서 이미 해당 시군구의 동 옵션이 있으면 바로 사용
     const cacheKey = `${CACHE_KEYS.DONG_OPTIONS}_${sido}_${sigungu}`;
     const cached = localStorage.getItem(cacheKey);
