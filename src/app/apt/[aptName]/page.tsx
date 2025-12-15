@@ -266,6 +266,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         codeHeatNm: detailedInfo.codeHeatNm,
         codeHallNm: detailedInfo.codeHallNm,
         kaptdEcntp: detailedInfo.kaptdEcntp,
+        kaptdPcnt: detailedInfo.kaptdPcnt,
+        kaptdPcntu: detailedInfo.kaptdPcntu,
 
         // Living Info
         subwayLine: detailedInfo.subwayLine,

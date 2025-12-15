@@ -28,7 +28,9 @@ export type ComplexInfo = {
   kaptBcompany?: string;
   codeHeatNm?: string;
   codeHallNm?: string;
-  kaptdEcntp?: number;
+  kaptdEcntp?: number; // Total parking (ground + underground)
+  kaptdPcnt?: number; // Ground parking
+  kaptdPcntu?: number; // Underground parking
 
   // Living Info
   subwayLine?: string;
@@ -418,7 +420,20 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
               <InfoItem label="건설사" value={info.kaptBcompany || '-'} icon="🏗️" />
               <InfoItem label="난방 방식" value={info.codeHeatNm || '-'} icon="🔥" />
               <InfoItem label="복도 유형" value={info.codeHallNm || '-'} icon="🚪" />
-              <InfoItem label="총 주차 대수" value={info.kaptdEcntp ? `${info.kaptdEcntp.toLocaleString()}대` : '-'} icon="🅿️" />
+              <div className="bg-card border rounded-lg p-4 flex items-center justify-between shadow-sm hover:bg-accent/5 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🅿️</span>
+                  <span className="text-sm font-medium text-muted-foreground">총 주차 대수</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-foreground">{info.kaptdEcntp ? `${info.kaptdEcntp.toLocaleString()}대` : '-'}</span>
+                  {(info.kaptdPcnt !== undefined || info.kaptdPcntu !== undefined) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      지상 {info.kaptdPcnt?.toLocaleString() ?? 0}대 · 지하 {info.kaptdPcntu?.toLocaleString() ?? 0}대
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 

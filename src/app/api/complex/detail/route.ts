@@ -11,7 +11,9 @@ interface ComplexDetail {
     kaptBcompany: string; // Constructor
     codeHeatNm: string; // Heating
     codeHallNm: string; // Hallway type
-    kaptdEcntp: number; // Total parking
+    kaptdEcntp: number; // Total parking (ground + underground)
+    kaptdPcnt: number; // Ground parking
+    kaptdPcntu: number; // Underground parking
 
     // Living Info
     subwayLine: string;
@@ -60,7 +62,9 @@ export async function GET(request: NextRequest) {
         b.kaptBcompany,
         b.codeHeatNm,
         b.codeHallNm,
-        b.kaptdEcntp,
+        COALESCE(d.kaptdPcnt, 0) + COALESCE(d.kaptdPcntu, 0) as kaptdEcntp,
+        COALESCE(d.kaptdPcnt, 0) as kaptdPcnt,
+        COALESCE(d.kaptdPcntu, 0) as kaptdPcntu,
         d.subwayLine,
         d.subwayStation,
         d.kaptdWtimebus,
@@ -158,6 +162,8 @@ export async function GET(request: NextRequest) {
             codeHeatNm: row.codeHeatNm,
             codeHallNm: row.codeHallNm,
             kaptdEcntp: row.kaptdEcntp,
+            kaptdPcnt: row.kaptdPcnt,
+            kaptdPcntu: row.kaptdPcntu,
             subwayLine: row.subwayLine,
             subwayStation: row.subwayStation,
             kaptdWtimebus: row.kaptdWtimebus,
