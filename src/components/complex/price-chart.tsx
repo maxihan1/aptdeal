@@ -65,7 +65,8 @@ export function PriceChart({ data, areas, colors }: PriceChartProps) {
                         }}
                         itemStyle={{ color: 'hsl(var(--foreground))', fontSize: '13px', padding: '2px 0' }}
                         labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.5rem', fontSize: '12px' }}
-                        formatter={(value: number, name: string) => {
+                        formatter={(value, name) => {
+                            if (typeof value !== 'number') return ['-', '거래가'];
                             // Find area name for color lookup if needed, but 'itemStyle' is general. 
                             // Recharts handles color squares automatically based on line stroke?
                             // Yes, usually.
