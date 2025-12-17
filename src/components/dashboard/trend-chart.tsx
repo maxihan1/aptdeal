@@ -162,7 +162,10 @@ export function TrendChart({ globalSido }: TrendChartProps) {
                                 contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
                                 itemStyle={{ color: 'hsl(var(--foreground))' }}
                                 labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                                formatter={(value: number) => [`${(value / 10000).toFixed(1)}억`, '평균 거래가']}
+                                formatter={(value) => {
+                                    if (typeof value !== 'number') return ['-', '평균 거래가'];
+                                    return [`${(value / 10000).toFixed(1)}억`, '평균 거래가'];
+                                }}
                             />
                             <Line
                                 type="monotone"

@@ -315,7 +315,7 @@ async function refreshDashboardCache() {
         const sidoRows = await executeQuery(`
             SELECT DISTINCT as1 FROM apt_list WHERE as1 IS NOT NULL AND as1 != '' ORDER BY as1
         `);
-        const sidoList = ['ALL', ...sidoRows.map(r => r.as1)];
+        const sidoList = ['ALL', ...(Array.isArray(sidoRows) ? sidoRows.map(r => r.as1) : [])];
 
         // 전국 최신 거래일 조회 (모든 지역에서 통일된 날짜 사용)
         const globalLatestRows = await executeQuery(`
