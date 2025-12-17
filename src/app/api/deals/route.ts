@@ -134,6 +134,91 @@ export async function GET(request: NextRequest) {
       query += ` ORDER BY d.dealYear DESC, d.dealMonth DESC, d.dealDay DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`;
       // newParams.push(limit); -> removed
 
+    } else if (aptName && !sigungu) {
+      // CASE 1.5: aptName만 있고 sigungu/dong 없음 (검색 결과에서 진입 시)
+      // /api/complex/detail과 동일한 10가지 매칭 로직 적용
+
+      // Normalize names for comparison (remove spaces)
+      const cleanAptName = aptName.replace(/\([^)]*\)/g, '').trim();
+      const noSpaceAptName = aptName.replace(/\s+/g, '');
+      const noSpaceCleanAptName = cleanAptName.replace(/\s+/g, '');
+      // "아파트" 제거 버전
+      const noAptSuffix = noSpaceAptName.replace(/아파트$/g, '');
+      const noAptSuffixClean = noSpaceCleanAptName.replace(/아파트$/g, '');
+
+      query = `
+              SELECT
+                d.id,
+                d.aptNm,
+                d.sggCd,
+                d.umdNm,
+                d.jibun,
+                d.excluUseAr,
+                d.dealAmount,
+                d.dealYear,
+                d.dealMonth,
+                d.dealDay,
+                d.floor,
+                d.aptDong,
+                d.buildYear,
+                d.dealingGbn,
+                d.cdealType,
+                l.as1,
+                l.as2,
+                d.umdNm as as3
+              FROM apt_deal_info d
+              LEFT JOIN (
+                  SELECT DISTINCT LEFT(bjdCode, 5) as sggCode, as1, as2
+                  FROM apt_list
+              ) l ON d.sggCd = l.sggCode
+              WHERE (
+                -- 1. 정확히 일치
+                REPLACE(d.aptNm, ' ', '') = ? COLLATE utf8mb4_unicode_ci
+                -- 2. 정확히 일치 + '아파트' 추가
+                OR REPLACE(d.aptNm, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci
+                -- 3. 괄호 제거 버전과 일치
+                OR REPLACE(d.aptNm, ' ', '') = ? COLLATE utf8mb4_unicode_ci
+                -- 4. 괄호 제거 버전 + '아파트' 추가
+                OR REPLACE(d.aptNm, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci
+                -- 5. 입력값이 DB값을 포함 (역방향 Like)
+                OR ? LIKE CONCAT('%', REPLACE(d.aptNm, ' ', ''), '%') COLLATE utf8mb4_unicode_ci
+                -- 6. '아파트' 제거 후 일치
+                OR REPLACE(d.aptNm, ' ', '') = ? COLLATE utf8mb4_unicode_ci
+                -- 7. '아파트' 제거 후 괄호 제거 버전과 일치
+                OR REPLACE(d.aptNm, ' ', '') = ? COLLATE utf8mb4_unicode_ci
+                -- 8. DB값이 입력값(아파트 제거)으로 시작
+                OR REPLACE(d.aptNm, ' ', '') LIKE CONCAT(?, '%') COLLATE utf8mb4_unicode_ci
+                -- 9. 입력값(아파트 제거, 괄호 제거)이 DB값으로 시작
+                OR ? LIKE CONCAT(REPLACE(d.aptNm, ' ', ''), '%') COLLATE utf8mb4_unicode_ci
+              )
+            `;
+      newParams.push(
+        noSpaceAptName,        // 1
+        noSpaceAptName,        // 2
+        noSpaceCleanAptName,   // 3
+        noSpaceCleanAptName,   // 4
+        noSpaceAptName,        // 5
+        noAptSuffix,           // 6
+        noAptSuffixClean,      // 7
+        noAptSuffixClean,      // 8
+        noAptSuffixClean       // 9
+      );
+
+      if (startDate && endDate) {
+        query += ` AND d.dealDate >= ? AND d.dealDate <= ? `;
+        newParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+
+      if (onlyCancelled) {
+        query += " AND (d.cdealType = 'O' OR d.cdealType = 'Y') ";
+      } else if (excludeCancelled) {
+        query += " AND (d.cdealType IS NULL OR TRIM(d.cdealType) = '') ";
+      }
+
+      const safeLimit = Number.isInteger(limit) ? limit : 3000;
+      const safeOffset = Number.isInteger(offset) ? offset : 0;
+      query += ` ORDER BY d.dealYear DESC, d.dealMonth DESC, d.dealDay DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`;
+
     } else {
       // CASE 2: 전체 조회 (대시보드 등) -> 서브쿼리 최적화 (idx_deal_date 활용)
 

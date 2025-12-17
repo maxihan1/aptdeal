@@ -82,7 +82,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
     } catch { }
   }, [urlStartDate, urlEndDate]);
 
-  const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}`;
+  const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}|${region}`;
   const [areaDealData, setAreaDealData] = useState<AreaDealData[]>([]);
   const [filteredDeals, setFilteredDeals] = useState<ComplexDeal[]>([]);
   const [info, setInfo] = useState<ComplexInfo | null>(null);
@@ -127,9 +127,40 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       });
 
       // 2. 기존 '단지명' 및 '동'으로 필터링된 거래 데이터 (차트 데이터 및 총 거래 건수 등을 위함)
+      // /api/complex/detail과 동일한 10가지 매칭 로직 적용
+      const cleanAptName = decodedAptName.replace(/\([^)]*\)/g, '').trim();
+      const noSpaceAptName = decodedAptName.replace(/\s+/g, '').toLowerCase();
+      const noSpaceCleanAptName = cleanAptName.replace(/\s+/g, '').toLowerCase();
+      const noAptSuffix = noSpaceAptName.replace(/아파트$/g, '');
+      const noAptSuffixClean = noSpaceCleanAptName.replace(/아파트$/g, '');
+
       const filteredDeals = dongFilteredOnlyDeals.filter((deal) => {
-        if (!deal.aptName || normalizeName(deal.aptName) !== normalizedTarget) return false;
-        return true; // 이미 dongFilteredOnlyDeals에서 동 필터링 완료
+        if (!deal.aptName) return false;
+        const dealNameNormalized = deal.aptName.replace(/\s+/g, '').toLowerCase();
+
+        // 10가지 매칭 조건
+        return (
+          // 1. 정확히 일치
+          dealNameNormalized === noSpaceAptName
+          // 2. 정확히 일치 + '아파트' 추가 (DB에 아파트가 있고 입력에 없는 경우)
+          || dealNameNormalized === noSpaceAptName + '아파트'
+          // 3. 괄호 제거 버전과 일치
+          || dealNameNormalized === noSpaceCleanAptName
+          // 4. 괄호 제거 버전 + '아파트' 추가
+          || dealNameNormalized === noSpaceCleanAptName + '아파트'
+          // 5. 입력값이 DB값을 포함 (역방향 Like)
+          || noSpaceAptName.includes(dealNameNormalized)
+          // 6. '아파트' 제거 후 일치
+          || dealNameNormalized === noAptSuffix
+          // 7. '아파트' 제거 후 괄호 제거 버전과 일치
+          || dealNameNormalized === noAptSuffixClean
+          // 8. DB값이 입력값(아파트 제거)으로 시작
+          || dealNameNormalized.startsWith(noAptSuffixClean)
+          // 9. 입력값(아파트 제거, 괄호 제거)이 DB값으로 시작
+          || noAptSuffixClean.startsWith(dealNameNormalized)
+          // 10. DB값이 입력값(아파트 제거)을 포함
+          || dealNameNormalized.includes(noAptSuffixClean)
+        );
       });
 
       // 콘솔 로그로 주요 값 확인
@@ -239,13 +270,19 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       let detailedInfo: any = {};
       try {
         const jibun = filteredDeals[0]?.address || '';
+        console.log('[Complex Detail API] Calling with:', { aptName: decodedAptName, region, jibun });
         const res = await fetch(`/api/complex/detail?aptName=${encodeURIComponent(decodedAptName)}&region=${encodeURIComponent(region)}&jibun=${encodeURIComponent(jibun)}`);
+        console.log('[Complex Detail API] Response status:', res.status);
         if (res.ok) {
           detailedInfo = await res.json();
+          console.log('[Complex Detail API] Response data:', detailedInfo);
+        } else {
+          console.error('[Complex Detail API] Response not ok:', res.status, await res.text());
         }
       } catch (e) {
         console.error("Failed to fetch complex detail", e);
       }
+      console.log('[Complex Detail] Setting info with detailedInfo:', detailedInfo);
 
       setInfo({
         name: decodedAptName,

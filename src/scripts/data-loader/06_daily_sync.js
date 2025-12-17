@@ -278,6 +278,9 @@ async function main() {
     // 대시보드 캐시 갱신
     await refreshDashboardCache();
 
+    // 검색 인덱스 갱신
+    await refreshSearchIndex();
+
     await closeConnection();
 }
 
@@ -309,13 +312,13 @@ async function refreshDashboardCache() {
         `);
 
         // 시도 목록 조회
-        const [sidoRows] = await executeQuery(`
+        const sidoRows = await executeQuery(`
             SELECT DISTINCT as1 FROM apt_list WHERE as1 IS NOT NULL AND as1 != '' ORDER BY as1
         `);
         const sidoList = ['ALL', ...sidoRows.map(r => r.as1)];
 
         // 전국 최신 거래일 조회 (모든 지역에서 통일된 날짜 사용)
-        const [globalLatestRows] = await executeQuery(`
+        const globalLatestRows = await executeQuery(`
             SELECT dealYear, dealMonth, dealDay
             FROM apt_deal_info
             ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC
@@ -375,13 +378,13 @@ async function updateCacheForRegion(sido, globalLatestDate) {
                WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
                GROUP BY l.as1, l.as2 ORDER BY count DESC LIMIT 1`;
 
-        const [topRegionRows] = await executeQuery(topRegionQuery, regionParams);
+        const topRegionRows = await executeQuery(topRegionQuery, regionParams);
         const topRegion = topRegionRows[0] || { region: "데이터 없음", count: 0 };
 
         // 2. 월간 거래량
         const monthlyQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
                               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
-        const [monthlyRows] = await executeQuery(monthlyQuery, regionParams);
+        const monthlyRows = await executeQuery(monthlyQuery, regionParams);
 
         // 3. 일일 거래량 (전국 최신 거래일 기준으로 통일)
         let todayVolume = 0;
@@ -394,7 +397,7 @@ async function updateCacheForRegion(sido, globalLatestDate) {
             const dailyQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
                                WHERE d.dealYear = ? AND d.dealMonth = ? AND d.dealDay = ?`;
             const dailyParams = sido !== 'ALL' ? [...regionParams, dealYear, dealMonth, dealDay] : [dealYear, dealMonth, dealDay];
-            const [dailyRows] = await executeQuery(dailyQuery, dailyParams);
+            const dailyRows = await executeQuery(dailyQuery, dailyParams);
             todayVolume = dailyRows[0]?.count || 0;
         }
 
@@ -402,7 +405,7 @@ async function updateCacheForRegion(sido, globalLatestDate) {
         const cancelledQuery = `SELECT COUNT(*) as count FROM apt_deal_info d ${sido !== 'ALL' ? regionJoin : ''}
                                WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
                                AND cdealType IS NOT NULL AND cdealType != ''`;
-        const [cancelledRows] = await executeQuery(cancelledQuery, regionParams);
+        const cancelledRows = await executeQuery(cancelledQuery, regionParams);
 
         // 캐시 저장
         const cacheData = {
@@ -426,6 +429,52 @@ async function updateCacheForRegion(sido, globalLatestDate) {
 
     } catch (error) {
         logError(`[캐시] ${sido} 오류: ${error.message}`);
+    }
+}
+
+/**
+ * 검색 인덱스 갱신
+ * 신규 아파트 추가 및 거래 건수 업데이트
+ */
+async function refreshSearchIndex() {
+    console.log(`
+============================================================
+  🔍 검색 인덱스 갱신 시작
+============================================================
+`);
+
+    const startTime = Date.now();
+
+    try {
+        // UPSERT로 신규 아파트 추가 및 기존 아파트 거래 건수 업데이트
+        const result = await executeQuery(`
+            INSERT INTO apt_search_index (aptNm, umdNm, sggCd, sido, sigungu, dealCount, lastDealDate)
+            SELECT 
+                d.aptNm,
+                d.umdNm,
+                d.sggCd,
+                l.as1 as sido,
+                l.as2 as sigungu,
+                COUNT(*) as dealCount,
+                MAX(DATE(d.dealDate)) as lastDealDate
+            FROM apt_deal_info d
+            JOIN (
+                SELECT DISTINCT LEFT(bjdCode, 5) as sggCode, as1, as2
+                FROM apt_list
+            ) l ON d.sggCd = l.sggCode
+            WHERE d.aptNm IS NOT NULL AND d.aptNm != ''
+            GROUP BY d.aptNm, d.umdNm, d.sggCd, l.as1, l.as2
+            ON DUPLICATE KEY UPDATE
+                dealCount = VALUES(dealCount),
+                lastDealDate = VALUES(lastDealDate),
+                updated_at = CURRENT_TIMESTAMP
+        `);
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        log(`검색 인덱스 갱신 완료: ${result.affectedRows}개 행 업데이트 (${elapsed}초)`);
+
+    } catch (error) {
+        logError(`검색 인덱스 갱신 오류: ${error.message}`);
     }
 }
 

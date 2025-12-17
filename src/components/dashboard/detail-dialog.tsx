@@ -84,7 +84,7 @@ export function DetailDialog({ open, onOpenChange, title, type, data, loading, o
                                     <div
                                         key={row.id || i}
                                         ref={isLast ? lastElementRef : null}
-                                        className={`flex flex-col p-4 border rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden ${isCancelled ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/50' : 'bg-card'}`}
+                                        className={`flex flex-col p-4 border rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden ${isCancelled ? 'bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900/50' : 'bg-card'}`}
                                     >
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex-1 min-w-0 pr-2">

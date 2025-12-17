@@ -10,6 +10,7 @@ import axios from "axios";
 import { format, subDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import AptSearchInput from "@/components/AptSearchInput";
 import {
   Dialog,
   DialogContent,
@@ -401,6 +402,11 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto px-3 pb-24 space-y-3">
+        {/* 아파트 검색 */}
+        <div className="bg-card border border-border rounded-xl shadow-sm p-3">
+          <AptSearchInput />
+        </div>
+
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <span className="text-base">🔍</span>
