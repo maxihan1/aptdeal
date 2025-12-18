@@ -79,9 +79,12 @@ export interface Deal {
 interface ComplexDetailProps {
   info: ComplexInfo;
   areas: string[]; // 예: ["전체", "59㎡", "84㎡", ...]
-  areaDealData: AreaDealData[]; // 면적별 거래 데이터
-  deals?: Deal[]; // 거래 내역 리스트용
-  dealType?: "trade" | "rent"; // 거래 유형
+  areaDealData: AreaDealData[]; // 면적별 거래 데이터 (매매)
+  deals?: Deal[]; // 거래 내역 리스트용 (매매)
+  dealType?: "trade" | "rent"; // 초기 탭 결정용
+  // 전월세 데이터 (옵션)
+  rentAreaDealData?: AreaDealData[];
+  rentDeals?: Deal[];
 }
 
 function InfoItem({ label, value, icon }: { label: string, value: string, icon: string }) {
@@ -96,10 +99,37 @@ function InfoItem({ label, value, icon }: { label: string, value: string, icon: 
   );
 }
 
-const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals = [], dealType: propDealType }) => {
+const ComplexDetail: React.FC<ComplexDetailProps> = ({
+  info,
+  areaDealData,
+  deals = [],
+  dealType: propDealType,
+  rentAreaDealData = [],
+  rentDeals = []
+}) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedArea, setSelectedArea] = React.useState("전체");
+  const [selectedDateRange, setSelectedDateRange] = React.useState<number>(3); // 기본값 3개월
+
+  // 탭 상태 관리 - URL 파라미터 'dealType' 또는 't'로 초기값 설정
+  const initialTab = searchParams.get('t') || searchParams.get('dealType') || propDealType || 'trade';
+  const [activeTab, setActiveTab] = React.useState<'trade' | 'rent'>(initialTab as 'trade' | 'rent');
+
+  // 탭 변경 시 URL 업데이트
+  const handleTabChange = (tab: 'trade' | 'rent') => {
+    setActiveTab(tab);
+    setSelectedArea("전체"); // 탭 변경 시 면적 선택 초기화
+    // URL 파라미터 업데이트 (히스토리에 추가하지 않음)
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('t', tab);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  // 현재 탭에 따른 데이터 선택
+  const currentAreaDealData = activeTab === 'rent' ? rentAreaDealData : areaDealData;
+  const currentDeals = activeTab === 'rent' ? rentDeals : deals;
+  const isRent = activeTab === 'rent';
 
   // 날짜 포맷팅 함수
   function formatDateRange(startDate: string, endDate: string) {
@@ -109,11 +139,10 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
   }
 
   // 억/천만원 단위 포맷 함수
-  // 억/천만원 단위 포맷 함수
   function formatKoreanPrice(price: number) {
     if (!price) return "-";
     const eok = Math.floor(price / 10000);
-    const remainder = Math.round(price % 10000); // 1만원 단위까지만 표시 (소수점 제거)
+    const remainder = Math.round(price % 10000);
 
     if (eok > 0) {
       return remainder > 0
@@ -123,30 +152,30 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
     return `${remainder.toLocaleString()}만원`;
   }
 
-  const dealType = searchParams.get('dealType');
-  const isRent = dealType === 'rent';
-
-  // 데이터 필터링 (전세/매매 및 취소건)
+  // 데이터 필터링 (취소건 제외, 전월세는 전세만)
   const processedData = useMemo(() => {
-    let data = areaDealData;
+    let data = currentAreaDealData;
 
+    // 전월세인 경우: 전세만 필터링 (월세 제외: rent/monthlyRent가 0이거나 없는 경우만)
     if (isRent) {
-      // 전월세: 전세(보증금 있고 월세 0)만 필터링
-      data = areaDealData.map(area => ({
+      data = currentAreaDealData.map(area => ({
         ...area,
-        prices: area.prices.filter(p => p.price > 0 && (p.rent === 0 || p.rent === undefined)),
+        prices: area.prices.filter(p =>
+          p.price > 0 && (p.rent === undefined || p.rent === 0)
+        ),
       })).filter(area => area.prices.length > 0);
     }
 
-    // 취소 건 제외 로직 (간소화: cdealType='Y' 등 제외)
+    // 취소 건 제외 로직 (cdealType='Y' 등 제외, 해제 계약 제외)
     return data.map(area => ({
       ...area,
       prices: area.prices.filter(p => !['Y', 'O'].includes(p.cdealType || '') && p.contractType !== '해제')
-    }));
-  }, [areaDealData, isRent]);
+    })).filter(area => area.prices.length > 0);
+  }, [currentAreaDealData, activeTab, isRent]);
 
   // 날짜 범위 변경 핸들러
   const handleDateRangeChange = (months: number) => {
+    setSelectedDateRange(months);
     const end = new Date();
     const start = new Date();
     if (months === 0) { // 전체 (임의로 10년)
@@ -291,6 +320,32 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
           </div>
 
           <TabsContent value="price" className="space-y-8 animate-in fade-in-50 duration-500">
+            {/* 매매/전월세 탭 */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => handleTabChange('trade')}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded-lg transition-all",
+                  activeTab === 'trade'
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                )}
+              >
+                매매 ({deals.length}건)
+              </button>
+              <button
+                onClick={() => handleTabChange('rent')}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded-lg transition-all",
+                  activeTab === 'rent'
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                )}
+              >
+                전월세 ({rentDeals.length}건)
+              </button>
+            </div>
+
             <div className="flex flex-wrap gap-2 mb-4">
               {[
                 { label: '1개월', value: 1 },
@@ -303,11 +358,30 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
                 <button
                   key={range.label}
                   onClick={() => handleDateRangeChange(range.value)}
-                  className="px-3 py-1 text-xs md:text-sm border rounded-full hover:bg-muted transition-colors bg-background"
+                  className={cn(
+                    "px-3 py-1 text-xs md:text-sm border rounded-full transition-colors",
+                    selectedDateRange === range.value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-muted"
+                  )}
                 >
                   {range.label}
                 </button>
               ))}
+            </div>
+
+            {/* 선택된 기간 표시 */}
+            <div className="text-base md:text-lg font-semibold text-foreground mb-4">
+              {selectedDateRange === 0
+                ? `${info.startDate?.replace(/-/g, '.')} ~ ${info.endDate?.replace(/-/g, '.')}`
+                : selectedDateRange === 1
+                  ? '최근 1개월'
+                  : selectedDateRange === 12
+                    ? '최근 1년'
+                    : selectedDateRange === 36
+                      ? '최근 3년'
+                      : `최근 ${selectedDateRange}개월`
+              }
             </div>
 
             <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -396,11 +470,11 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({ info, areaDealData, deals
             </div>
 
             {/* 거래 내역 리스트 */}
-            {deals.length > 0 && (
+            {currentDeals.length > 0 && (
               <div className="space-y-4">
                 <DealList
-                  deals={deals}
-                  dealType={propDealType || (isRent ? 'rent' : 'trade')}
+                  deals={currentDeals}
+                  dealType={activeTab}
                   selectedArea={selectedArea}
                   pageSize={15}
                 />

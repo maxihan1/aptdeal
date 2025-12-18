@@ -82,40 +82,70 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
     } catch { }
   }, [urlStartDate, urlEndDate]);
 
-  const cacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${dealType}|${region}`;
+  // 캐시 키 (매매/전월세 공통 부분)
+  const baseCacheKey = `${decodedAptName}|${sido}|${sigungu}|${dong}|${startDate}|${endDate}|${region}`;
+
+  // 매매 데이터 상태
   const [areaDealData, setAreaDealData] = useState<AreaDealData[]>([]);
   const [filteredDeals, setFilteredDeals] = useState<ComplexDeal[]>([]);
+  // 전월세 데이터 상태
+  const [rentAreaDealData, setRentAreaDealData] = useState<AreaDealData[]>([]);
+  const [rentFilteredDeals, setRentFilteredDeals] = useState<ComplexDeal[]>([]);
+
   const [info, setInfo] = useState<ComplexInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDeals() {
-      console.log('fetchDeals 호출');
-      if (dealCache[cacheKey]) {
-        console.log('dealCache hit');
-        await processDeals(dealCache[cacheKey]);
-        setLoading(false);
-        return;
-      }
+    async function fetchAllData() {
+      console.log('fetchAllData 호출');
       setLoading(true);
-      // 1. API 호출 (전월세/매매에 따라 다른 API) - aptName 파라미터로 성능 최적화
-      const apiPath = dealType === 'rent' ? '/api/rent' : '/api/deals';
-      const res = await fetch(
-        `${apiPath}?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
-      );
-      const deals = await res.json();
-      console.log('API fetch 후 deals.length:', deals?.length);
-      // 2. 캐싱
-      dealCache[cacheKey] = deals;
-      console.log('processDeals 호출 전');
-      await processDeals(deals);
-      console.log('processDeals 호출 후');
+
+      const tradeCacheKey = `${baseCacheKey}|trade`;
+      const rentCacheKey = `${baseCacheKey}|rent`;
+
+      // 매매와 전월세 데이터를 병렬로 fetch
+      const [tradeDeals, rentDealsData] = await Promise.all([
+        // 매매 데이터
+        (async () => {
+          if (dealCache[tradeCacheKey]) {
+            console.log('tradeCacheKey hit');
+            return dealCache[tradeCacheKey];
+          }
+          const res = await fetch(
+            `/api/deals?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
+          );
+          const data = await res.json();
+          dealCache[tradeCacheKey] = data;
+          return data;
+        })(),
+        // 전월세 데이터
+        (async () => {
+          if (dealCache[rentCacheKey]) {
+            console.log('rentCacheKey hit');
+            return dealCache[rentCacheKey];
+          }
+          const res = await fetch(
+            `/api/rent?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
+          );
+          const data = await res.json();
+          dealCache[rentCacheKey] = data;
+          return data;
+        })()
+      ]);
+
+      console.log('API fetch 완료 - 매매:', tradeDeals?.length, ', 전월세:', rentDealsData?.length);
+
+      // 매매 데이터 처리
+      await processDeals(tradeDeals, 'trade');
+      // 전월세 데이터 처리
+      await processDeals(rentDealsData, 'rent');
+
       setLoading(false);
     }
 
     // 3. 면적별 그룹핑 및 info 생성
-    async function processDeals(deals: Deal[]) {
-      console.log('processDeals 함수 진입');
+    async function processDeals(deals: Deal[], processDealType: 'trade' | 'rent') {
+      console.log('processDeals 함수 진입, type:', processDealType);
       const normalizedTarget = normalizeName(decodedAptName);
 
       // 1. '동'으로만 필터링된 거래 데이터 (aptNameOptions 생성을 위함)
@@ -200,7 +230,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         }[]
       } = {};
 
-      if (dealType === 'rent') {
+      if (processDealType === 'rent') {
         filteredDeals.forEach((deal) => {
           const area = Math.floor(deal.area) + "㎡";
           if (!areaMap[area]) areaMap[area] = [];
@@ -242,13 +272,12 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
           areaMap[area].push(dealData);
         });
       }
-      const areaDealData = Object.entries(areaMap)
+      const areaDealDataResult = Object.entries(areaMap)
         .map(([area, prices]) => ({ area, prices }))
         .sort((a, b) => parseFloat(a.area) - parseFloat(b.area));
-      setAreaDealData(areaDealData);
 
-      // 거래 내역 리스트용 데이터 저장
-      const dealsForList: ComplexDeal[] = filteredDeals.map((deal, index) => ({
+      // 거래 내역 리스트용 데이터
+      const dealsForListRaw: ComplexDeal[] = filteredDeals.map((deal, index) => ({
         id: deal.id || `deal-${index}`,
         date: deal.date,
         area: Number(deal.area),
@@ -263,9 +292,31 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         rent: deal.rent,
         contractType: deal.contractType,
       }));
-      setFilteredDeals(dealsForList);
 
-      // **info 객체에 옵션 포함**
+      // 중복 제거 (내용 기반: 날짜+면적+층+가격/보증금+월세)
+      const seenContent = new Set<string>();
+      const dealsForList = dealsForListRaw.filter(deal => {
+        // 내용 기반 키 생성
+        const contentKey = `${deal.date}|${deal.area}|${deal.floor}|${deal.price || deal.deposit || 0}|${deal.rent || 0}`;
+        if (seenContent.has(contentKey)) return false;
+        seenContent.add(contentKey);
+        return true;
+      });
+
+      console.log(`[processDeals ${processDealType}] 중복 제거: ${dealsForListRaw.length} -> ${dealsForList.length}`);
+
+      // 타입에 따라 다른 상태에 저장
+      if (processDealType === 'rent') {
+        setRentAreaDealData(areaDealDataResult);
+        setRentFilteredDeals(dealsForList);
+        // rent의 경우 info 설정 스킵 (trade에서 이미 설정됨)
+        return;
+      } else {
+        setAreaDealData(areaDealDataResult);
+        setFilteredDeals(dealsForList);
+      }
+
+      // **info 객체에 옵션 포함** (매매 데이터 처리 시에만)
       // 단지 상세 정보 호출
       let detailedInfo: any = {};
       try {
@@ -276,8 +327,11 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         if (res.ok) {
           detailedInfo = await res.json();
           console.log('[Complex Detail API] Response data:', detailedInfo);
+        } else if (res.status === 404) {
+          // 단지 기본정보가 없는 경우 (흔함 - 무시해도 됨)
+          console.log('[Complex Detail API] 단지 기본정보 없음 (404)');
         } else {
-          console.error('[Complex Detail API] Response not ok:', res.status, await res.text());
+          console.warn('[Complex Detail API] Response not ok:', res.status);
         }
       } catch (e) {
         console.error("Failed to fetch complex detail", e);
@@ -317,8 +371,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       });
     }
 
-    fetchDeals();
-  }, [cacheKey, decodedAptName, sido, sigungu, dong, startDate, endDate, dealType, region]);
+    fetchAllData();
+  }, [baseCacheKey, decodedAptName, sido, sigungu, dong, startDate, endDate, region]);
 
   return (
     <div className="w-full flex flex-col md:flex-row relative">
@@ -343,6 +397,8 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             areaDealData={areaDealData}
             deals={filteredDeals}
             dealType={dealType as "trade" | "rent"}
+            rentAreaDealData={rentAreaDealData}
+            rentDeals={rentFilteredDeals}
           />
         </main>
       ) : !loading ? (

@@ -61,10 +61,12 @@ export async function GET(request: NextRequest) {
         r.umdNm as as3
       FROM apt_rent_info r
       JOIN (
-        SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2
+        SELECT LEFT(bjdCode, 5) as sggCode, 
+               MAX(as1) as as1, MAX(as2) as as2
         FROM apt_list
         WHERE as1 = ? AND as2 = ?
-      ) l ON r.sggCd = l.sggCode
+        GROUP BY LEFT(bjdCode, 5)
+      ) l ON r.sggCd = l.sggCode COLLATE utf8mb4_unicode_ci
       WHERE r.dealDate >= ? AND r.dealDate <= ?
     `;
 

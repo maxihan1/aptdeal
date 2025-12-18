@@ -64,7 +64,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
 
   // 필터 상태 (기본값으로 시작)
   const defaultDates = getDefaultDates();
-  const [sido, setSido] = useState<string>("");
+  const [sido, setSido] = useState<string>("전국");
   const [sigungu, setSigungu] = useState<string>("");
   const [dong, setDong] = useState<string>("");
   const [startDate, setStartDate] = useState<string>(defaultDates.start);
@@ -162,7 +162,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
 
   // 시군구 불러오기 (캐시 활용)
   useEffect(() => {
-    if (!sido) {
+    if (!sido || sido === "전국") {
       setSigunguOptions([]);
       setSigungu("ALL");
       setDong("ALL");
@@ -420,6 +420,7 @@ export default function Sidebar({ className, closeMobileMenu }: SidebarProps) {
                   <SelectValue placeholder="시도 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="전국">전국</SelectItem>
                   {sidoOptions.map(opt => (
                     <SelectItem key={opt.code} value={opt.code}>{opt.name}</SelectItem>
                   ))}

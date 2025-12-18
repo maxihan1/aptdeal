@@ -315,6 +315,14 @@ async function refreshDashboardCache() {
         const sidoRows = await executeQuery(`
             SELECT DISTINCT as1 FROM apt_list WHERE as1 IS NOT NULL AND as1 != '' ORDER BY as1
         `);
+
+        // 디버그 로그
+        if (!Array.isArray(sidoRows)) {
+            logWarning(`sidoRows is not an array: ${typeof sidoRows}, value: ${JSON.stringify(sidoRows)}`);
+        } else {
+            log(`시도 목록 조회 완료: ${sidoRows.length}개`);
+        }
+
         const sidoList = ['ALL', ...(Array.isArray(sidoRows) ? sidoRows.map(r => r.as1) : [])];
 
         // 전국 최신 거래일 조회 (모든 지역에서 통일된 날짜 사용)

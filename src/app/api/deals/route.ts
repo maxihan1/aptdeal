@@ -91,10 +91,12 @@ export async function GET(request: NextRequest) {
                 d.umdNm as as3
               FROM apt_deal_info d
               JOIN (
-                  SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2
+                  SELECT LEFT(bjdCode, 5) as sggCode, 
+                         MAX(as1) as as1, MAX(as2) as as2
                   FROM apt_list
                   WHERE as1 = ? ${sido === '세종특별자치시' ? '' : 'AND as2 = ?'}
-              ) l ON d.sggCd = l.sggCode
+                  GROUP BY LEFT(bjdCode, 5)
+              ) l ON d.sggCd = l.sggCode COLLATE utf8mb4_unicode_ci
               WHERE 1=1
             `;
       // 세종특별자치시는 sigungu 파라미터 불필요
@@ -168,8 +170,9 @@ export async function GET(request: NextRequest) {
                 d.umdNm as as3
               FROM apt_deal_info d
               LEFT JOIN (
-                  SELECT DISTINCT LEFT(bjdCode, 5) as sggCode, as1, as2
+                  SELECT LEFT(bjdCode, 5) as sggCode, MAX(as1) as as1, MAX(as2) as as2
                   FROM apt_list
+                  GROUP BY LEFT(bjdCode, 5)
               ) l ON d.sggCd = l.sggCode
               WHERE (
                 -- 1. 정확히 일치
@@ -307,8 +310,9 @@ export async function GET(request: NextRequest) {
             FROM (${subQuery}) sub
             JOIN apt_deal_info d ON d.id = sub.id
             JOIN (
-                SELECT DISTINCT LEFT(bjdCode, 5) as sggCode, as1, as2
+                SELECT LEFT(bjdCode, 5) as sggCode, MAX(as1) as as1, MAX(as2) as as2
                 FROM apt_list
+                GROUP BY LEFT(bjdCode, 5)
             ) l ON d.sggCd = l.sggCode
             WHERE 1=1
         `;
