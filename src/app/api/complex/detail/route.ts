@@ -43,6 +43,49 @@ export async function GET(request: NextRequest) {
         const sigungu = regionParts.length > 1 ? regionParts[regionParts.length - 2] : '';
         const sido = regionParts.length > 2 ? regionParts[0] : '';
 
+        // 1. Try mapping table first (most accurate)
+        const mappingQuery = `
+            SELECT m.kapt_code, b.kaptName, b.kaptdaCnt, b.kaptDongCnt, b.kaptUsedate, b.kaptBcompany,
+                   b.codeHeatNm, b.codeHallNm,
+                   COALESCE(d.kaptdPcnt, 0) + COALESCE(d.kaptdPcntu, 0) as kaptdEcntp,
+                   COALESCE(d.kaptdPcnt, 0) as kaptdPcnt,
+                   COALESCE(d.kaptdPcntu, 0) as kaptdPcntu,
+                   d.subwayLine, d.subwayStation, d.kaptdWtimebus, d.kaptdWtimesub, d.educationFacility
+            FROM apt_name_mapping m
+            JOIN apt_basic_info b ON m.kapt_code COLLATE utf8mb4_unicode_ci = b.kaptCode
+            LEFT JOIN apt_detail_info d ON b.kaptCode = d.kaptCode
+            WHERE m.deal_apt_name = ? COLLATE utf8mb4_unicode_ci 
+              AND m.umd_nm = ? COLLATE utf8mb4_unicode_ci
+            ORDER BY m.confidence_score DESC
+            LIMIT 1
+        `;
+
+        const mappingResult = await executeQuery(mappingQuery, [aptName, dong]) as any[];
+
+        if (mappingResult.length > 0) {
+            // Mapping found - return directly
+            const row = mappingResult[0];
+            const detail: ComplexDetail = {
+                kaptName: row.kaptName,
+                kaptdaCnt: row.kaptdaCnt,
+                kaptDongCnt: row.kaptDongCnt,
+                kaptUsedate: row.kaptUsedate,
+                kaptBcompany: row.kaptBcompany,
+                codeHeatNm: row.codeHeatNm,
+                codeHallNm: row.codeHallNm,
+                kaptdEcntp: row.kaptdEcntp,
+                kaptdPcnt: row.kaptdPcnt,
+                kaptdPcntu: row.kaptdPcntu,
+                subwayLine: row.subwayLine,
+                subwayStation: row.subwayStation,
+                kaptdWtimebus: row.kaptdWtimebus,
+                kaptdWtimesub: row.kaptdWtimesub,
+                educationFacility: row.educationFacility
+            };
+            return NextResponse.json(detail);
+        }
+
+        // 2. Fallback to dynamic matching
         // Normalize names for comparison (remove spaces)
         // cleanAptName: remove content in parentheses
         const cleanAptName = aptName.replace(/\([^)]*\)/g, '').trim();
@@ -77,6 +120,9 @@ export async function GET(request: NextRequest) {
       FROM apt_basic_info b
       LEFT JOIN apt_detail_info d ON b.kaptCode = d.kaptCode
       WHERE 
+         -- REQUIRED: Sigungu must match (prevents wrong region matches like 안산 현대 vs 구로 현대)
+         (? = 'xxxx' OR b.kaptAddr LIKE CONCAT('%', ?, '%'))
+         AND
          -- Broad filtering: Match by any of the name variations OR name+address partial match
          (
              REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci
@@ -96,8 +142,11 @@ export async function GET(request: NextRequest) {
             -- 1. Exact Name Match + Sigungu Match (Best)
             WHEN REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci AND b.kaptAddr LIKE CONCAT('%', ?, '%') THEN 1
             
-            -- 2. Exact Name Match (Any Region)
-            WHEN REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci THEN 2
+            -- 1.5. Dong + AptName partial match (handles 신현동 + 효성 → 신현효성아파트)
+            WHEN b.kaptAddr LIKE CONCAT('%', ?, '%') AND b.kaptName LIKE CONCAT('%', ?, '%') THEN 1
+            
+            -- 2. Exact Name Match (Any Region) - lowered priority due to regional ambiguity
+            WHEN REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci THEN 3
             
             -- 2.2. Dong + N단지 pattern match (highest priority for word order issues)
             WHEN ? != '' AND b.kaptAddr LIKE CONCAT('%', ?, '%') AND b.kaptName LIKE CONCAT('%', ?, '%') THEN 2
@@ -131,12 +180,14 @@ export async function GET(request: NextRequest) {
             
             -- Fallback
             ELSE 99
-        END ASC
+        END ASC,
+        b.kaptdaCnt DESC  -- Prefer larger complexes when priority is same
       LIMIT 1
     `;
 
         const params = [
             // WHERE Clause Params
+            sigungu || 'xxxx', sigungu || 'xxxx', // REQUIRED: Sigungu filter (new)
             noSpaceAptName,
             noSpaceAptName,
             noSpaceCleanAptName,
@@ -148,6 +199,7 @@ export async function GET(request: NextRequest) {
 
             // ORDER BY Clause Params
             noSpaceAptName, sigungu || 'xxxx',     // 1
+            dong || 'xxxx', noSpaceAptName,        // 1.5 (new: Dong + AptName partial)
             noSpaceAptName,                        // 2
             danjiPattern, dong || 'xxxx', danjiPattern, // 2.2 (new: Dong + N단지)
             noSpaceAptName, sigungu || 'xxxx',     // 2.5 (new: Input contains DB Name + Sigungu)

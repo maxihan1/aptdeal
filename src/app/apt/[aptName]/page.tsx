@@ -55,7 +55,9 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
   const sigungu = searchParams.get("g") || searchParams.get("sigungu") || "";
   const dong = searchParams.get("d") || searchParams.get("dong") || "";
   const dealType = searchParams.get("t") || searchParams.get("dealType") || "trade";
-  const region = searchParams.get("r") || searchParams.get("region") || "";
+  // region이 없으면 sido/sigungu/dong을 조합하여 생성
+  const regionParam = searchParams.get("r") || searchParams.get("region") || "";
+  const region = regionParam || (sido && sigungu && dong ? `${sido} ${sigungu} ${dong}` : "");
 
   // 날짜는 URL 파라미터 우선, 없으면 로컬스토리지에서 읽기
   const urlStartDate = searchParams.get("startDate");
