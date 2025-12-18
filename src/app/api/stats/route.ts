@@ -63,11 +63,13 @@ export async function GET(request: Request) {
     // Common join clause for region filtering
     const regionJoin = `
       JOIN (
-          SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2 
+          SELECT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, 
+                 MAX(as1) as as1, MAX(as2) as as2 
           FROM apt_list
           WHERE 1=1
           ${sido ? 'AND as1 = ?' : ''}
           ${sigungu ? 'AND as2 = ?' : ''}
+          GROUP BY LEFT(bjdCode, 5)
       ) l ON d.sggCd = l.sggCode
     `;
 
