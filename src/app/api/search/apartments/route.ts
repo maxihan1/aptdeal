@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
         aptNmNormalized,
         -- 유사도 점수 계산
         CASE 
+          -- 동+아파트 복합 검색 (동천동 써니 -> 동천동 써니벨리)
+          WHEN ? >= 2 AND umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+               AND aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 95
           -- 정확히 일치
           WHEN aptNmNormalized = ? COLLATE utf8mb4_unicode_ci THEN 100
           -- 검색어로 시작
@@ -69,6 +72,12 @@ export async function GET(request: NextRequest) {
         aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
         -- OR 동 이름 매칭
         OR umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+        -- OR 동+아파트 복합 검색 (2단어 이상일 때)
+        OR (
+          ? >= 2 AND 
+          umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci AND 
+          aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+        )
         -- OR 지역+아파트 복합 검색 (2단어 이상일 때)
         OR (
           ? >= 2 AND (
@@ -87,16 +96,24 @@ export async function GET(request: NextRequest) {
     const lastPart = searchParts.length > 1 ? searchParts[searchParts.length - 1].replace(/\s+/g, '') : searchTermNormalized;
 
     const params = [
-      searchTermNormalized,  // 정확일치
-      searchTermNormalized,  // 시작
-      searchTermNormalized,  // 동 정확일치
-      searchTermNormalized,  // 포함
-      searchTermNormalized,  // 동 포함
+      // CASE 문 파라미터
+      searchParts.length,     // 동+아파트 복합: 단어개수
+      firstPart,              // 동+아파트 복합: 동 이름
+      lastPart,               // 동+아파트 복합: 아파트명
+      searchTermNormalized,   // 정확일치
+      searchTermNormalized,   // 시작
+      searchTermNormalized,   // 동 정확일치
+      searchTermNormalized,   // 포함
+      searchTermNormalized,   // 동 포함
       firstPart,              // 지역명 시군구
       firstPart,              // 지역명 시도
-      searchTermNormalized,  // WHERE 아파트명
-      searchTermNormalized,  // WHERE 동이름
-      searchParts.length,     // 단어 개수
+      // WHERE 문 파라미터
+      searchTermNormalized,   // WHERE 아파트명
+      searchTermNormalized,   // WHERE 동이름
+      searchParts.length,     // 동+아파트 복합: 단어개수
+      firstPart,              // 동+아파트 복합: 동 이름
+      lastPart,               // 동+아파트 복합: 아파트명
+      searchParts.length,     // 지역+아파트 복합: 단어개수
       firstPart,              // 복합: 시군구
       lastPart,               // 복합: 아파트명
       firstPart,              // 복합: 시도

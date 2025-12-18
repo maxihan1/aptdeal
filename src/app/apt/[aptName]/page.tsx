@@ -153,6 +153,15 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
         if (!dong) return true; // 동이 없으면 필터링하지 않음
         const regionTokens = (deal.region || '').split(' ');
         const dealDong = regionTokens[regionTokens.length - 1];
+
+        // dong 파라미터가 "읍/면 + 리" 형태인 경우 (예: "배방읍 장재리")
+        const dongParts = dong.split(' ');
+        if (dongParts.length > 1) {
+          // 마지막 부분(리)만 비교
+          const lastDongPart = dongParts[dongParts.length - 1];
+          return normalizeName(dealDong) === normalizeName(lastDongPart);
+        }
+
         return normalizeName(dealDong) === normalizeName(dong);
       });
 

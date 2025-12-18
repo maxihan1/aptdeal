@@ -49,6 +49,10 @@ export async function GET(request: NextRequest) {
         const noSpaceAptName = aptName.replace(/\s+/g, '');
         const noSpaceCleanAptName = cleanAptName.replace(/\s+/g, '');
 
+        // Extract "N단지" pattern (e.g., "12단지", "11단지")
+        const danjiMatch = aptName.match(/(\d+단지)/);
+        const danjiPattern = danjiMatch ? danjiMatch[1] : '';
+
         // Improved Query Strategy (Enhanced Existing Logic):
         // We maintain the strict priority order (1, 2, 3...) but add Sigungu matching as a higher priority condition.
         // We also use REPLACE(..., ' ', '') for robust name comparison.
@@ -84,6 +88,8 @@ export async function GET(request: NextRequest) {
              OR (b.kaptName LIKE CONCAT('%', ?, '%') AND b.kaptAddr LIKE CONCAT('%', ?, '%'))
              -- New: Address Match (Fallback)
              OR (? != '' AND b.kaptAddr LIKE CONCAT('%', ?, '%') AND b.kaptAddr LIKE CONCAT('%', ?, '%'))
+             -- New: Dong + N단지 pattern match (handles word order issues like 판교더샵 vs 더샵판교)
+             OR (? != '' AND b.kaptAddr LIKE CONCAT('%', ?, '%') AND b.kaptName LIKE CONCAT('%', ?, '%'))
          )
       ORDER BY
         CASE 
@@ -93,11 +99,17 @@ export async function GET(request: NextRequest) {
             -- 2. Exact Name Match (Any Region)
             WHEN REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci THEN 2
             
+            -- 2.2. Dong + N단지 pattern match (highest priority for word order issues)
+            WHEN ? != '' AND b.kaptAddr LIKE CONCAT('%', ?, '%') AND b.kaptName LIKE CONCAT('%', ?, '%') THEN 2
+            
+            -- 2.5. Input contains DB Name + Sigungu Match (handles word order: 판교더샵 vs 더샵판교)
+            WHEN ? LIKE CONCAT('%', REPLACE(b.kaptName, ' ', ''), '%') COLLATE utf8mb4_unicode_ci AND b.kaptAddr LIKE CONCAT('%', ?, '%') THEN 3
+            
             -- 3. Name + 'Apt' + Sigungu Match
-            WHEN REPLACE(b.kaptName, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci AND b.kaptAddr LIKE CONCAT('%', ?, '%') THEN 3
+            WHEN REPLACE(b.kaptName, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci AND b.kaptAddr LIKE CONCAT('%', ?, '%') THEN 4
             
             -- 4. Name + 'Apt' (Any Region)
-            WHEN REPLACE(b.kaptName, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci THEN 4
+            WHEN REPLACE(b.kaptName, ' ', '') = CONCAT(?, '아파트') COLLATE utf8mb4_unicode_ci THEN 5
             
             -- 5. Clean Name + Sigungu Match
             WHEN REPLACE(b.kaptName, ' ', '') = ? COLLATE utf8mb4_unicode_ci AND b.kaptAddr LIKE CONCAT('%', ?, '%') THEN 5
@@ -132,10 +144,13 @@ export async function GET(request: NextRequest) {
             noSpaceAptName, // New param for reverse like
             cleanAptName, dong || 'xxxx',
             jibun || '', dong || 'xxxx', jibun || 'xxxx', // Address Match Params
+            danjiPattern, dong || 'xxxx', danjiPattern, // Dong + N단지 Match Params (WHERE)
 
             // ORDER BY Clause Params
             noSpaceAptName, sigungu || 'xxxx',     // 1
             noSpaceAptName,                        // 2
+            danjiPattern, dong || 'xxxx', danjiPattern, // 2.2 (new: Dong + N단지)
+            noSpaceAptName, sigungu || 'xxxx',     // 2.5 (new: Input contains DB Name + Sigungu)
             noSpaceAptName, sigungu || 'xxxx',     // 3
             noSpaceAptName,                        // 4
             noSpaceCleanAptName, sigungu || 'xxxx',// 5
