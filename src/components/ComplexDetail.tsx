@@ -465,12 +465,18 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({
                 </Select>
               </div>
               <div className="bg-card border rounded-xl p-4 shadow-sm">
-                <PriceChart data={chartData} areas={targetAreas} colors={areaColors} />
+                {chartData.length > 0 ? (
+                  <PriceChart data={chartData} areas={targetAreas} colors={areaColors} />
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-muted-foreground">
+                    <p>해당 기간 내 시세 및 실거래가 정보가 없습니다.</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* 거래 내역 리스트 */}
-            {currentDeals.length > 0 && (
+            {currentDeals.length > 0 ? (
               <div className="space-y-4">
                 <DealList
                   deals={currentDeals}
@@ -478,6 +484,15 @@ const ComplexDetail: React.FC<ComplexDetailProps> = ({
                   selectedArea={selectedArea}
                   pageSize={15}
                 />
+              </div>
+            ) : (
+              <div className="bg-card border rounded-xl p-8 shadow-sm">
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-sm">해당 기간 내 {activeTab === 'trade' ? '매매' : '전월세'} 거래 내역이 없습니다.</p>
+                </div>
               </div>
             )}
           </TabsContent>
