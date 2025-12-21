@@ -517,8 +517,23 @@ async function refreshSearchIndex() {
                 updated_at = CURRENT_TIMESTAMP
         `);
 
+        log(`검색 인덱스 갱신 완료: ${result.affectedRows}개 행 업데이트`);
+
+        // apt_search_index → apt_name_mapping 동기화
+        // 캐시 생성 시 apt_name_mapping을 사용하므로, 검색 인덱스와 동기화 필요
+        log('🔗 apt_name_mapping 동기화 중...');
+        const syncResult = await executeQuery(`
+            INSERT IGNORE INTO apt_name_mapping (deal_apt_name, kapt_code)
+            SELECT aptNm, kapt_code
+            FROM apt_search_index
+            WHERE kapt_code IS NOT NULL 
+              AND kapt_code != 'UNMAPPED'
+              AND kapt_code != ''
+        `);
+        log(`   apt_name_mapping 동기화: ${syncResult.affectedRows}개 추가`);
+
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        log(`검색 인덱스 갱신 완료: ${result.affectedRows}개 행 업데이트 (${elapsed}초)`);
+        log(`✅ 검색 인덱스 및 매핑 동기화 완료 (${elapsed}초)`);
 
     } catch (error) {
         logError(`검색 인덱스 갱신 오류: ${error.message}`);
