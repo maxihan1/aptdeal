@@ -2,18 +2,24 @@
 
 import Sidebar from "../components/Sidebar";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { pageview } from "@/lib/gtag";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
+import ViewModeToggle, { ViewMode } from "@/components/ViewModeToggle";
+import { KakaoMapProvider } from "@/components/KakaoMapProvider";
 
-import { Menu, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Menu } from "lucide-react";
 
-function Header({ onMenuClick }: { onMenuClick: () => void }) {
+interface HeaderProps {
+  onMenuClick: () => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+  showViewModeToggle?: boolean;
+}
+
+function Header({ onMenuClick, viewMode, onViewModeChange, showViewModeToggle = true }: HeaderProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
   const handleHeaderClick = () => {
     // 로고 클릭시 항상 홈으로
@@ -47,7 +53,14 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="hidden md:block text-sm text-muted-foreground font-medium mr-2">
+            {/* View Mode Toggle */}
+            {showViewModeToggle && (
+              <ViewModeToggle
+                mode={viewMode}
+                onChange={onViewModeChange}
+              />
+            )}
+            <div className="hidden lg:block text-sm text-muted-foreground font-medium">
               전국 아파트 실거래가 조회
             </div>
             <ModeToggle />
@@ -68,6 +81,21 @@ function ClientLayoutContent({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // View Mode 상태 (URL에서 읽기)
+  const viewMode = (searchParams.get('view') as ViewMode) || 'list';
+
+  // View Mode 변경 핸들러
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (mode === 'list') {
+      params.delete('view');
+    } else {
+      params.set('view', mode);
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [pathname, searchParams, router]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -89,14 +117,20 @@ function ClientLayoutContent({
 
   const isRegionPage = pathname.startsWith("/region");
   const sidebarOnly = searchParams.get("sidebarOnly") === "1";
+  const isHomePage = pathname === "/";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground transition-colors duration-300">
-      <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
+      <Header
+        onMenuClick={() => setIsMobileMenuOpen(true)}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        showViewModeToggle={isHomePage && !sidebarOnly}
+      />
 
       <div className="flex flex-1 overflow-hidden w-full max-w-screen-2xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-4 gap-4 relative">
-        {/* Desktop Sidebar */}
-        {!sidebarOnly && (
+        {/* Desktop Sidebar - 지도 모드일 때는 숨김 */}
+        {!sidebarOnly && viewMode !== 'map' && (
           <Sidebar className="hidden lg:block w-64 flex-shrink-0 h-screen overflow-y-auto rounded-lg border border-border bg-card shadow-sm" />
         )}
 
@@ -142,9 +176,11 @@ export default function ClientLayout({
         enableSystem
         disableTransitionOnChange
       >
-        <ClientLayoutContent>
-          {children}
-        </ClientLayoutContent>
+        <KakaoMapProvider>
+          <ClientLayoutContent>
+            {children}
+          </ClientLayoutContent>
+        </KakaoMapProvider>
       </ThemeProvider>
     </Suspense>
   );

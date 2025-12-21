@@ -281,6 +281,9 @@ async function main() {
     // 검색 인덱스 갱신
     await refreshSearchIndex();
 
+    // 지도용 캐시 갱신 (아파트 가격 + 지역별)
+    await refreshMapCaches();
+
     await closeConnection();
 }
 
@@ -415,13 +418,44 @@ async function updateCacheForRegion(sido, globalLatestDate) {
                                AND cdealType IS NOT NULL AND cdealType != ''`;
         const cancelledRows = await executeQuery(cancelledQuery, regionParams);
 
+        // 5. 가격 추이 (30일)
+        const trendQuery = sido !== 'ALL'
+            ? `SELECT DATE_FORMAT(d.dealDate, '%m-%d') as date, ROUND(AVG(d.dealAmount)) as average, COUNT(*) as count
+               FROM apt_deal_info d ${regionJoin}
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY date ORDER BY date ASC`
+            : `SELECT DATE_FORMAT(d.dealDate, '%m-%d') as date, ROUND(AVG(d.dealAmount)) as average, COUNT(*) as count
+               FROM apt_deal_info d
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY date ORDER BY date ASC`;
+        const trendRows = await executeQuery(trendQuery, regionParams);
+
+        // 6. 인기 단지 (30일)
+        const popularQuery = sido !== 'ALL'
+            ? `SELECT d.aptNm, CONCAT(l.as1, ' ', l.as2, ' ', IFNULL(d.umdNm, '')) as region,
+                      l.as1 as sido, l.as2 as sigungu, d.umdNm as dong, COUNT(*) as count 
+               FROM apt_deal_info d ${regionJoin}
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY d.aptNm, region, l.as1, l.as2, d.umdNm
+               ORDER BY count DESC LIMIT 5`
+            : `SELECT d.aptNm, CONCAT(l.as1, ' ', l.as2, ' ', IFNULL(d.umdNm, '')) as region,
+                      l.as1 as sido, l.as2 as sigungu, d.umdNm as dong, COUNT(*) as count 
+               FROM apt_deal_info d
+               JOIN (SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, as1, as2 FROM apt_list) l ON d.sggCd = l.sggCode
+               WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               GROUP BY d.aptNm, region, l.as1, l.as2, d.umdNm
+               ORDER BY count DESC LIMIT 5`;
+        const popularComplexRows = await executeQuery(popularQuery, regionParams);
+
         // 캐시 저장
         const cacheData = {
             topRegion,
             monthlyVolume: monthlyRows[0]?.count || 0,
             todayVolume,
             latestDate: latestDateStr,
-            cancelledCount: cancelledRows[0]?.count || 0
+            cancelledCount: cancelledRows[0]?.count || 0,
+            trend: trendRows,
+            popularComplexes: popularComplexRows
         };
 
         await executeQuery(`
@@ -483,6 +517,37 @@ async function refreshSearchIndex() {
 
     } catch (error) {
         logError(`검색 인덱스 갱신 오류: ${error.message}`);
+    }
+}
+
+/**
+ * 지도용 캐시 갱신 (아파트 가격 + 지역별)
+ */
+async function refreshMapCaches() {
+    console.log(`
+============================================================
+  🗺️ 지도용 캐시 갱신 시작
+============================================================
+`);
+
+    const startTime = Date.now();
+
+    try {
+        // 1. 지역 가격 캐시 갱신
+        log('📊 지역 가격 캐시 갱신 중...');
+        const { refreshRegionCache } = await import('./create_region_cache.js');
+        await refreshRegionCache();
+
+        // 2. 사이드바 캐시 갱신
+        log('📋 사이드바 캐시 갱신 중...');
+        const { refreshSidebarCache } = await import('./create_sidebar_cache.js');
+        await refreshSidebarCache();
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        log(`✅ 지도용 캐시 갱신 완료 (${elapsed}초)`);
+
+    } catch (error) {
+        logError(`지도용 캐시 갱신 오류: ${error.message}`);
     }
 }
 

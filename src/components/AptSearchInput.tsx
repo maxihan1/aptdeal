@@ -13,6 +13,8 @@ interface SearchResult {
     sido: string;
     sigungu: string;
     dong: string;
+    kaptCode?: string;     // K-apt 단지코드 (주소 기반 매핑)
+    jibun?: string;        // 지번 주소
 }
 
 interface AptSearchInputProps {
@@ -88,6 +90,13 @@ export default function AptSearchInput({ onSelect, className }: AptSearchInputPr
                 r: result.region,
                 t: "trade"
             });
+            // kaptCode가 있으면 URL에 추가 (주소 기반 매핑)
+            if (result.kaptCode) {
+                params.set('k', result.kaptCode);
+            }
+            if (result.jibun) {
+                params.set('j', result.jibun);
+            }
             // aptNm 사용 (apt_deal_info 원본명)
             router.push(`/apt/${encodeURIComponent(result.aptNm)}?${params.toString()}`);
         }

@@ -45,6 +45,12 @@ interface DealRow {
   as3: string;
 }
 
+interface DisplayNameRow {
+  aptNm: string;
+  umdNm: string;
+  displayName: string | null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -66,6 +72,8 @@ export async function GET(request: NextRequest) {
 
     const onlyCancelled = searchParams.get('onlyCancelled') === 'true';
     const excludeCancelled = searchParams.get('excludeCancelled') === 'true';
+    // 항상 displayName 조회 (정식 단지명 표시용)
+    const includeDisplayName = true;
 
     // CASE 1: 지역 필터 있음 (sido, sigungu) -> 기존 로직 (JOIN 최적화)
     if (sido && sigungu) {
@@ -336,23 +344,46 @@ export async function GET(request: NextRequest) {
 
     const rows = await executeQuery(query, newParams) as DealRow[];
 
+    // displayName 조회 (소량 조회 시에만 성능을 위해)
+    let displayNameMap: Map<string, string> = new Map();
+    if (includeDisplayName && rows.length > 0) {
+      // rows에서 유니크한 (aptNm, umdNm) 조합 추출
+      const uniqueApts = [...new Set(rows.map(r => `${r.aptNm}|${r.umdNm}`))];
+
+      // apt_search_index에서 displayName 조회
+      const displayQuery = `
+        SELECT aptNm, umdNm, COALESCE(displayName, aptNm) as displayName
+        FROM apt_search_index
+        WHERE CONCAT(aptNm, '|', umdNm) IN (${uniqueApts.map(() => '?').join(',')})
+      `;
+      const displayRows = await executeQuery(displayQuery, uniqueApts) as DisplayNameRow[];
+
+      displayRows.forEach(row => {
+        displayNameMap.set(`${row.aptNm}|${row.umdNm}`, row.displayName || row.aptNm);
+      });
+    }
+
     // 프론트엔드 Deal 인터페이스에 맞게 변환
-    const deals = rows.map((row, index) => ({
-      id: row.id?.toString() || `deal-${index}`,
-      region: `${row.as1} ${row.as2 || ''} ${row.umdNm || ''}`.replace(/\s+/g, ' ').trim(),
-      address: row.jibun || '',
-      area: Number(row.excluUseAr) || 0,
-      price: Number(row.dealAmount) || 0,
-      date: `${row.dealYear}-${String(row.dealMonth).padStart(2, '0')}-${String(row.dealDay).padStart(2, '0')}`,
-      aptName: row.aptNm || '',
-      floor: Number(row.floor) || 0,
-      aptDong: row.aptDong || '',
-      buildYear: Number(row.buildYear) || 0,
-      dealMonth: row.dealMonth,
-      dealDay: row.dealDay,
-      tradeType: row.dealingGbn || '중개거래',
-      cdealType: row.cdealType || ''
-    }));
+    const deals = rows.map((row, index) => {
+      const key = `${row.aptNm}|${row.umdNm}`;
+      return {
+        id: row.id?.toString() || `deal-${index}`,
+        region: `${row.as1} ${row.as2 || ''} ${row.umdNm || ''}`.replace(/\s+/g, ' ').trim(),
+        address: row.jibun || '',
+        area: Number(row.excluUseAr) || 0,
+        price: Number(row.dealAmount) || 0,
+        date: `${row.dealYear}-${String(row.dealMonth).padStart(2, '0')}-${String(row.dealDay).padStart(2, '0')}`,
+        aptName: displayNameMap.get(key) || row.aptNm || '',  // displayName 우선 사용
+        aptNm: row.aptNm || '',  // 원본명도 유지 (URL용)
+        floor: Number(row.floor) || 0,
+        aptDong: row.aptDong || '',
+        buildYear: Number(row.buildYear) || 0,
+        dealMonth: row.dealMonth,
+        dealDay: row.dealDay,
+        tradeType: row.dealingGbn || '중개거래',
+        cdealType: row.cdealType || ''
+      };
+    });
 
     return NextResponse.json(deals);
 

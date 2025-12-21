@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/mysql';
 
 interface SearchResult {
-  aptName: string;       // 표시명: "읍면동 아파트명"
+  aptName: string;       // 표시명: "읍면동 정식단지명"
   aptNm: string;         // apt_deal_info 원본명 (URL에 사용)
   region: string;        // "시도 시군구 읍면동"
   sido: string;
   sigungu: string;
   dong: string;
   householdCount?: number;
+  kaptCode?: string;     // K-apt 단지코드 (주소 기반 매핑)
+  jibun?: string;        // 지번 주소
+  officialName?: string; // 정식 단지명 (카카오명 우선)
+  lat?: number;          // 위도
+  lng?: number;          // 경도
 }
 
 export async function GET(request: NextRequest) {
@@ -38,56 +43,62 @@ export async function GET(request: NextRequest) {
 
     const sql = `
       SELECT 
-        aptNm,
-        umdNm as dong,
-        sido,
-        sigungu,
-        CONCAT(sido, ' ', sigungu, ' ', umdNm) as region,
-        CONCAT(umdNm, ' ', aptNm) as displayName,
-        householdCount,
-        dealCount,
-        aptNmNormalized,
+        s.aptNm,
+        s.umdNm as dong,
+        s.sido,
+        s.sigungu,
+        CONCAT(s.sido, ' ', s.sigungu, ' ', s.umdNm) as region,
+        CONCAT(s.umdNm, ' ', COALESCE(s.displayName, s.aptNm)) as displayNameFull,
+        COALESCE(s.displayName, s.aptNm) as officialName,
+        s.householdCount,
+        s.dealCount,
+        s.aptNmNormalized,
+        s.kapt_code as kaptCode,
+        s.jibun,
+        b.latitude as lat,
+        b.longitude as lng,
         -- 유사도 점수 계산
         CASE 
           -- 동+아파트 복합 검색 (동천동 써니 -> 동천동 써니벨리)
-          WHEN ? >= 2 AND umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
-               AND aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 95
+          WHEN ? >= 2 AND s.umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+               AND s.aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 95
           -- 정확히 일치
-          WHEN aptNmNormalized = ? COLLATE utf8mb4_unicode_ci THEN 100
+          WHEN s.aptNmNormalized = ? COLLATE utf8mb4_unicode_ci THEN 100
           -- 검색어로 시작
-          WHEN aptNmNormalized LIKE CONCAT(?, '%') COLLATE utf8mb4_unicode_ci THEN 90
+          WHEN s.aptNmNormalized LIKE CONCAT(?, '%') COLLATE utf8mb4_unicode_ci THEN 90
           -- 동 이름 정확히 일치
-          WHEN umdNmNormalized = ? COLLATE utf8mb4_unicode_ci THEN 80
+          WHEN s.umdNmNormalized = ? COLLATE utf8mb4_unicode_ci THEN 80
           -- 검색어 포함
-          WHEN aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 70
+          WHEN s.aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 70
           -- 동 이름 포함
-          WHEN umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 60
+          WHEN s.umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci THEN 60
           -- 지역명(시군구) 포함 + 아파트명 포함 (복합 검색)
-          WHEN (sigungu LIKE CONCAT('%', ?, '%') OR sido LIKE CONCAT('%', ?, '%')) THEN 50
+          WHEN (s.sigungu LIKE CONCAT('%', ?, '%') OR s.sido LIKE CONCAT('%', ?, '%')) THEN 50
           ELSE 40
         END as relevanceScore
-      FROM apt_search_index
+      FROM apt_search_index s
+      LEFT JOIN apt_basic_info b ON s.kapt_code COLLATE utf8mb4_unicode_ci = b.kaptCode COLLATE utf8mb4_unicode_ci
       WHERE 
         -- 아파트명 매칭 (공백 무시)
-        aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+        s.aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
         -- OR 동 이름 매칭
-        OR umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+        OR s.umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
         -- OR 동+아파트 복합 검색 (2단어 이상일 때)
         OR (
           ? >= 2 AND 
-          umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci AND 
-          aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
+          s.umdNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci AND 
+          s.aptNmNormalized LIKE CONCAT('%', ?, '%') COLLATE utf8mb4_unicode_ci
         )
         -- OR 지역+아파트 복합 검색 (2단어 이상일 때)
         OR (
           ? >= 2 AND (
-            (sigungu LIKE CONCAT('%', ?, '%') AND aptNmNormalized LIKE CONCAT('%', ?, '%'))
-            OR (sido LIKE CONCAT('%', ?, '%') AND aptNmNormalized LIKE CONCAT('%', ?, '%'))
+            (s.sigungu LIKE CONCAT('%', ?, '%') AND s.aptNmNormalized LIKE CONCAT('%', ?, '%'))
+            OR (s.sido LIKE CONCAT('%', ?, '%') AND s.aptNmNormalized LIKE CONCAT('%', ?, '%'))
           )
         )
       ORDER BY 
         relevanceScore DESC,
-        dealCount DESC
+        s.dealCount DESC
       LIMIT 15
     `;
 
@@ -123,14 +134,19 @@ export async function GET(request: NextRequest) {
     const rows = await executeQuery(sql, params) as any[];
 
     const results: SearchResult[] = rows.map(row => ({
-      aptName: row.displayName,
+      aptName: row.displayNameFull,
       aptNm: row.aptNm,
       region: row.region,
       sido: row.sido,
       sigungu: row.sigungu,
       dong: row.dong,
       householdCount: row.householdCount || 0,
-      dealCount: row.dealCount || 0
+      dealCount: row.dealCount || 0,
+      kaptCode: row.kaptCode && row.kaptCode !== 'UNMAPPED' ? row.kaptCode : undefined,
+      jibun: row.jibun || undefined,
+      officialName: row.officialName,
+      lat: row.lat ? parseFloat(row.lat) : undefined,
+      lng: row.lng ? parseFloat(row.lng) : undefined,
     }));
 
     return NextResponse.json(results);

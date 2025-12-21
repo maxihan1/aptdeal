@@ -25,6 +25,7 @@ export default function RootLayout({
         <meta name="keywords" content="아파트 실거래가, 전월세 실거래가, 아파트 트렌드, 아파트 가격 변동, 아파트 가격하락, 아파트 전망, 부동산 전망, 아파트 랭킹, 압구정 현대 아파트, 래미안, 힐스테이트, 푸르지오, 자이, 롯데캐슬, 아파트전세, 더샵, 올림픽파크 포레온, 헬리오시티, 잠실엘스, 잠실리첸츠, 반포자이, 원베일리, 아크로비스타, 아크로리버파크" />
         <meta name="author" content="APTDEAL" />
         <meta name="robots" content="index, follow" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="googlebot" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1" />
 
         {/* 캐노니컬 URL */}

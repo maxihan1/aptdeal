@@ -106,3 +106,189 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Kakao Map Marker Styles */
+.apt-marker {
+  cursor: pointer;
+  transition: transform 0.2s, z-index 0s;
+  touch-action: auto;
+  /* 모바일 터치 허용 */
+}
+
+/* 모바일 성능 최적화: 애니메이션 제거 */
+@media (max-width: 768px) {
+  .apt-marker {
+    transition: none;
+  }
+
+  .apt-marker:hover {
+    transform: none;
+  }
+
+  .apt-marker-content {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.apt-marker:hover {
+  transform: scale(1.08);
+  z-index: 100 !important;
+}
+
+.apt-marker.selected {
+  transform: scale(1.1);
+  z-index: 100 !important;
+}
+
+.apt-marker-content {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(260, 60%, 45%) 100%);
+  color: white;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  min-width: 50px;
+}
+
+.apt-marker.up .apt-marker-content {
+  background: linear-gradient(135deg, #e85d6c 0%, #c77dbb 100%);
+}
+
+.apt-marker.down .apt-marker-content {
+  background: linear-gradient(135deg, #5a9fd4 0%, #7eb8d8 100%);
+}
+
+.apt-marker.selected .apt-marker-content {
+  box-shadow: 0 0 0 2px white, 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.apt-marker.rental .apt-marker-content {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+  opacity: 0.8;
+}
+
+.apt-marker.rental .apt-marker-arrow {
+  border-top-color: #6b7280;
+}
+
+.apt-marker-name {
+  display: block;
+  font-size: 8px;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 65px;
+}
+
+.apt-marker-price {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.apt-marker-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid hsl(var(--primary));
+  margin: 0 auto;
+}
+
+.apt-marker.up .apt-marker-arrow {
+  border-top-color: #e85d6c;
+}
+
+.apt-marker.down .apt-marker-arrow {
+  border-top-color: #5a9fd4;
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Region Marker Styles (시도/시군구/읍면동) */
+.region-marker {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.region-marker:hover {
+  transform: scale(1.08);
+  z-index: 100 !important;
+}
+
+.region-marker-content {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  min-width: 60px;
+  border: 1.5px solid hsl(var(--primary));
+}
+
+.region-sido .region-marker-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  min-width: 70px;
+}
+
+.region-sigungu .region-marker-content {
+  background: linear-gradient(135deg, #11998e 0%, #5bb98b 100%);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+}
+
+.region-dong .region-marker-content {
+  background: linear-gradient(135deg, #5a9fd4 0%, #7eb8d8 100%);
+  color: white;
+  border: none;
+  padding: 5px 8px;
+}
+
+.region-marker-name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.region-sido .region-marker-name {
+  font-size: 13px;
+}
+
+.region-sigungu .region-marker-name {
+  font-size: 12px;
+}
+
+.region-marker-price {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 1px;
+}
+
+.region-sido .region-marker-price {
+  font-size: 14px;
+}
+
+.region-marker-count {
+  display: block;
+  font-size: 9px;
+  opacity: 0.85;
+}

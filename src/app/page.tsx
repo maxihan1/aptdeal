@@ -1,5 +1,6 @@
 "use client";
 import { Suspense, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { TrendChart } from "@/components/dashboard/trend-chart"
 import PopularComplexes from "@/components/dashboard/popular-complexes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,9 +10,27 @@ import { format } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DetailDialog } from "@/components/dashboard/detail-dialog"
+import dynamic from "next/dynamic"
+
+// 지도 컴포넌트는 클라이언트에서만 로드 (SSR 비활성화)
+const MapView = dynamic(() => import("@/components/MapView"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">지도 로딩 중...</p>
+      </div>
+    </div>
+  )
+});
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const viewMode = searchParams.get('view') || 'list';
+
   const [globalSido, setGlobalSido] = useState<string>("ALL");
+
   const [sidoOptions, setSidoOptions] = useState<{ code: string, name: string }[]>([]);
   const [activeTab, setActiveTab] = useState("market-info");
 
@@ -322,6 +341,16 @@ export default function Home() {
     </div>
   );
 
+  // 지도 모드일 때
+  if (viewMode === 'map') {
+    return (
+      <div className="h-full w-full">
+        <MapView className="h-full w-full" />
+      </div>
+    );
+  }
+
+  // 리스트 모드 (기존 대시보드)
   return (
     <div className="flex-1 space-y-4 p-3 sm:p-4 md:p-8 pt-4 sm:pt-6">
       {/* Detail Dialog */}

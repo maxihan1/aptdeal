@@ -55,6 +55,9 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
   const sigungu = searchParams.get("g") || searchParams.get("sigungu") || "";
   const dong = searchParams.get("d") || searchParams.get("dong") || "";
   const dealType = searchParams.get("t") || searchParams.get("dealType") || "trade";
+  // 주소 기반 매핑 파라미터 (k=kaptCode, j=jibun)
+  const kaptCode = searchParams.get("k") || searchParams.get("kaptCode") || "";
+  const jibunParam = searchParams.get("j") || searchParams.get("jibun") || "";
   // region이 없으면 sido/sigungu/dong을 조합하여 생성
   const regionParam = searchParams.get("r") || searchParams.get("region") || "";
   const region = regionParam || (sido && sigungu && dong ? `${sido} ${sigungu} ${dong}` : "");
@@ -331,9 +334,13 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       // 단지 상세 정보 호출
       let detailedInfo: any = {};
       try {
-        const jibun = filteredDeals[0]?.address || '';
-        console.log('[Complex Detail API] Calling with:', { aptName: decodedAptName, region, jibun });
-        const res = await fetch(`/api/complex/detail?aptName=${encodeURIComponent(decodedAptName)}&region=${encodeURIComponent(region)}&jibun=${encodeURIComponent(jibun)}`);
+        const jibun = jibunParam || filteredDeals[0]?.address || '';
+        // kaptCode가 있으면 우선 사용 (주소 기반 매핑)
+        const apiUrl = kaptCode
+          ? `/api/complex/detail?kaptCode=${encodeURIComponent(kaptCode)}&aptName=${encodeURIComponent(decodedAptName)}&region=${encodeURIComponent(region)}&jibun=${encodeURIComponent(jibun)}`
+          : `/api/complex/detail?aptName=${encodeURIComponent(decodedAptName)}&region=${encodeURIComponent(region)}&jibun=${encodeURIComponent(jibun)}`;
+        console.log('[Complex Detail API] Calling with:', { kaptCode, aptName: decodedAptName, region, jibun });
+        const res = await fetch(apiUrl);
         console.log('[Complex Detail API] Response status:', res.status);
         if (res.ok) {
           detailedInfo = await res.json();
@@ -350,7 +357,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       console.log('[Complex Detail] Setting info with detailedInfo:', detailedInfo);
 
       setInfo({
-        name: decodedAptName,
+        name: detailedInfo.kaptName || decodedAptName, // 정식 단지명 우선 표시
         address: filteredDeals[0]?.address || '',
         region: filteredDeals[0]?.region || '',
         avgPrice: "",
