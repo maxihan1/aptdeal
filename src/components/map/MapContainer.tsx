@@ -154,20 +154,16 @@ export default function MapContainer({
                 gu: result.sigungu,
             };
             setSelectedApartment(marker);
-            if (!isMobile) {
-                setIsApartmentSidebarOpen(true);
-            }
+            setIsApartmentSidebarOpen(true);
         } else {
             console.log('No coordinates available for this apartment');
         }
-    }, [isMobile]);
+    }, []); // Removed isMobile dependency as it's no longer used here
 
     // 아파트 클릭 핸들러
     const handleApartmentClick = useCallback((apartment: ApartmentMarker) => {
         setSelectedApartment(apartment);
-        if (!isMobile) {
-            setIsApartmentSidebarOpen(true);
-        }
+        setIsApartmentSidebarOpen(true);
         setIsRegionSidebarOpen(false);
         onApartmentSelect?.(apartment);
     }, [onApartmentSelect, isMobile]);
@@ -175,9 +171,7 @@ export default function MapContainer({
     // 지역 클릭 핸들러
     const handleRegionClick = useCallback((region: RegionMarker) => {
         setSelectedRegion(region);
-        if (!isMobile) {
-            setIsRegionSidebarOpen(true);
-        }
+        setIsRegionSidebarOpen(true);
         setIsApartmentSidebarOpen(false);
         onRegionSelect?.(region);
 
@@ -243,12 +237,10 @@ export default function MapContainer({
                 avgPrice: 0,
             };
             setSelectedApartment(marker);
-            if (!isMobile) {
-                setIsApartmentSidebarOpen(true);
-            }
+            setIsApartmentSidebarOpen(true);
             setIsRegionSidebarOpen(false);
         }
-    }, [isMobile]);
+    }, []); // Removed isMobile dependency as it's no longer used here
 
     return (
         <div className={cn("relative w-full h-full", className)}>
@@ -303,36 +295,30 @@ export default function MapContainer({
                 )}
             </div>
 
-            {/* 아파트 사이드바 - 모바일에서 숨김 */}
-            {!isMobile && (
-                <MapSidebar
-                    apartment={selectedApartment ? {
-                        id: selectedApartment.id,
-                        name: selectedApartment.name,
-                        address: selectedApartment.address,
-                        dong: selectedApartment.dong,
-                        gu: selectedApartment.gu,
-                        avgPrice: selectedApartment.avgPrice,
-                        householdCount: selectedApartment.householdCount,
-                    } : null}
-                    isOpen={isApartmentSidebarOpen}
-                    onClose={handleApartmentSidebarClose}
-                />
-            )}
+            <MapSidebar
+                apartment={selectedApartment ? {
+                    id: selectedApartment.id,
+                    name: selectedApartment.name,
+                    address: selectedApartment.address,
+                    dong: selectedApartment.dong,
+                    gu: selectedApartment.gu,
+                    avgPrice: selectedApartment.avgPrice,
+                    householdCount: selectedApartment.householdCount,
+                } : null}
+                isOpen={isApartmentSidebarOpen}
+                onClose={handleApartmentSidebarClose}
+            />
 
-            {/* 지역 사이드바 - 모바일에서 숨김 */}
-            {!isMobile && (
-                <RegionSidebar
-                    regionType={selectedRegion?.type || 'sido'}
-                    regionName={selectedRegion?.name || ''}
-                    parentName={selectedRegion?.parentName}
-                    isOpen={isRegionSidebarOpen}
-                    onClose={handleRegionSidebarClose}
-                    onRegionClick={handleChildRegionClick}
-                    onApartmentClick={handleChildApartmentClick}
-                    bounds={isRegionSidebarOpen ? currentBounds : undefined}
-                />
-            )}
+            <RegionSidebar
+                regionType={selectedRegion?.type || 'sido'}
+                regionName={selectedRegion?.name || ''}
+                parentName={selectedRegion?.parentName}
+                isOpen={isRegionSidebarOpen}
+                onClose={handleRegionSidebarClose}
+                onRegionClick={handleChildRegionClick}
+                onApartmentClick={handleChildApartmentClick}
+                bounds={isRegionSidebarOpen ? currentBounds : undefined}
+            />
 
             {/* 지도 */}
             <KakaoMap
