@@ -3,13 +3,13 @@
  * 
  * 사용법:
  *   node 06_daily_sync.js --mode=daily   # 최근 3개월 (매일 실행)
- *   node 06_daily_sync.js --mode=weekly  # 최근 6개월 (매주 월요일 실행)
+ *   node 06_daily_sync.js --mode=weekly  # 최근 6개월 + 신규 단지 보완 (매주 화요일)
  * 
  * 크론탭 예시:
  *   # 매일 새벽 4시
  *   0 4 * * * cd /path/to/web && node src/scripts/data-loader/06_daily_sync.js --mode=daily >> sync.log 2>&1
- *   # 매주 월요일 새벽 3시
- *   0 3 * * 1 cd /path/to/web && node src/scripts/data-loader/06_daily_sync.js --mode=weekly >> sync.log 2>&1
+ *   # 매주 화요일 새벽 5시 (일일 동기화 이후)
+ *   0 5 * * 2 cd /path/to/web && node src/scripts/data-loader/06_daily_sync.js --mode=weekly >> sync.log 2>&1
  */
 
 import { testConnection, closeConnection, executeQuery } from './utils/db.js';
@@ -284,6 +284,11 @@ async function main() {
     // 지도용 캐시 갱신 (아파트 가격 + 지역별)
     await refreshMapCaches();
 
+    // 주간 모드에서만 실행: 신규 단지 보완 작업
+    if (mode === 'weekly') {
+        await weeklyMaintenanceTasks();
+    }
+
     await closeConnection();
 }
 
@@ -553,6 +558,157 @@ async function refreshMapCaches() {
 
     } catch (error) {
         logError(`지도용 캐시 갱신 오류: ${error.message}`);
+    }
+}
+
+/**
+ * 주간 전용: 신규 아파트 보완 작업
+ * - displayName 업데이트 (카카오 검색)
+ * - 좌표 수집 (좌표 없는 단지)
+ * - K-apt 매핑 (미매핑 단지)
+ */
+async function weeklyMaintenanceTasks() {
+    console.log(`
+============================================================
+  🔧 주간 신규 단지 보완 작업 시작
+============================================================
+`);
+
+    const startTime = Date.now();
+    const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
+
+    if (!KAKAO_REST_API_KEY) {
+        logWarning('KAKAO_REST_API_KEY가 설정되지 않아 주간 보완 작업을 건너뜁니다.');
+        return;
+    }
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    try {
+        // 1. displayName이 없는 신규 아파트 업데이트 (최대 200개)
+        log('📝 1단계: displayName이 없는 아파트 업데이트...');
+
+        const aptsNeedDisplayName = await executeQuery(`
+            SELECT si.id, si.aptNm, si.umdNm, si.kapt_code,
+                   b.latitude, b.longitude, b.kaptAddr
+            FROM apt_search_index si
+            LEFT JOIN apt_basic_info b ON si.kapt_code COLLATE utf8mb4_unicode_ci = b.kaptCode COLLATE utf8mb4_unicode_ci
+            WHERE si.displayName IS NULL 
+            ORDER BY si.dealCount DESC
+            LIMIT 200
+        `);
+
+        let displayNameUpdated = 0;
+        for (const apt of aptsNeedDisplayName) {
+            try {
+                const searchQuery = apt.kaptAddr || `${apt.umdNm} ${apt.aptNm}`;
+                const response = await fetch(
+                    `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(searchQuery + ' 아파트')}&size=3`,
+                    { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.documents && data.documents.length > 0) {
+                        const aptDoc = data.documents.find(d => d.category_name?.includes('아파트')) || data.documents[0];
+                        const displayName = aptDoc.place_name.replace(/아파트$/g, '').trim();
+
+                        await executeQuery(`UPDATE apt_search_index SET displayName = ? WHERE id = ?`, [displayName, apt.id]);
+                        displayNameUpdated++;
+                    } else {
+                        // 카카오 미검색 시 aptNm 사용
+                        await executeQuery(`UPDATE apt_search_index SET displayName = ? WHERE id = ?`, [apt.aptNm, apt.id]);
+                    }
+                }
+                await sleep(100);
+            } catch (e) {
+                // 개별 오류 무시
+            }
+        }
+        log(`   ✅ displayName 업데이트: ${displayNameUpdated}/${aptsNeedDisplayName.length}개`);
+
+        // 2. 좌표가 없는 아파트에 좌표 추가 (최대 100개)
+        log('📍 2단계: 좌표가 없는 아파트에 좌표 추가...');
+
+        const aptsNeedCoords = await executeQuery(`
+            SELECT kaptCode, kaptName, kaptAddr 
+            FROM apt_basic_info 
+            WHERE (latitude IS NULL OR longitude IS NULL)
+            AND kaptAddr IS NOT NULL AND kaptAddr != ''
+            LIMIT 100
+        `);
+
+        let coordsUpdated = 0;
+        for (const apt of aptsNeedCoords) {
+            try {
+                const response = await fetch(
+                    `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(apt.kaptAddr)}`,
+                    { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.documents && data.documents.length > 0) {
+                        const doc = data.documents[0];
+                        await executeQuery(
+                            `UPDATE apt_basic_info SET latitude = ?, longitude = ? WHERE kaptCode = ?`,
+                            [parseFloat(doc.y), parseFloat(doc.x), apt.kaptCode]
+                        );
+                        coordsUpdated++;
+                    }
+                }
+                await sleep(100);
+            } catch (e) {
+                // 개별 오류 무시
+            }
+        }
+        log(`   ✅ 좌표 업데이트: ${coordsUpdated}/${aptsNeedCoords.length}개`);
+
+        // 3. kapt_code가 없는 아파트에 K-apt 매핑 시도 (지번 기반, 최대 100개)
+        log('🔗 3단계: K-apt 미매핑 아파트 매핑 시도...');
+
+        const unmappedApts = await executeQuery(`
+            SELECT id, aptNm, umdNm, sggCd, jibun
+            FROM apt_search_index
+            WHERE (kapt_code IS NULL OR kapt_code = 'UNMAPPED')
+            AND jibun IS NOT NULL AND jibun != ''
+            LIMIT 100
+        `);
+
+        let mapped = 0;
+        for (const apt of unmappedApts) {
+            try {
+                // 지번 기반으로 apt_basic_info에서 매칭 시도
+                const matches = await executeQuery(`
+                    SELECT kaptCode, kaptName
+                    FROM apt_basic_info
+                    WHERE kaptAddr LIKE CONCAT('%', ?, '%')
+                    LIMIT 1
+                `, [apt.jibun]);
+
+                if (matches.length > 0) {
+                    await executeQuery(
+                        `UPDATE apt_search_index SET kapt_code = ? WHERE id = ?`,
+                        [matches[0].kaptCode, apt.id]
+                    );
+                    mapped++;
+                }
+            } catch (e) {
+                // 개별 오류 무시
+            }
+        }
+        log(`   ✅ K-apt 매핑: ${mapped}/${unmappedApts.length}개`);
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`
+[${new Date().toISOString()}] ✅ 주간 보완 작업 완료 (${elapsed}초)
+   - displayName: ${displayNameUpdated}개
+   - 좌표: ${coordsUpdated}개
+   - K-apt 매핑: ${mapped}개
+`);
+
+    } catch (error) {
+        logError(`주간 보완 작업 오류: ${error.message}`);
     }
 }
 

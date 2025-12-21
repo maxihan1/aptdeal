@@ -243,7 +243,10 @@ export default function MapContainer({
     }, []); // Removed isMobile dependency as it's no longer used here
 
     return (
-        <div className={cn("relative w-full h-full", className)}>
+        <div
+            className={cn("relative w-full h-full", className)}
+            style={{ touchAction: 'manipulation' }}
+        >
             {/* 플로팅 검색바 */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-md">
                 <div className="relative">
@@ -257,7 +260,7 @@ export default function MapContainer({
                         }}
                         onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
                         placeholder="아파트 검색..."
-                        className="w-full pl-9 pr-9 py-2.5 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/50 dark:border-zinc-700/50 rounded-lg shadow-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full pl-9 pr-9 py-2.5 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/50 dark:border-zinc-700/50 rounded-lg shadow-lg text-base focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     {isSearching && (
                         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />

@@ -67,12 +67,17 @@ node src/scripts/data-loader/06_daily_sync.js --mode=weekly
 # 크론탭 편집
 crontab -e
 
-# 매일 새벽 4시 - 최근 3개월 동기화
+# 매일 새벽 4시 - 최근 3개월 동기화 (매매/전월세 + 캐시)
 0 4 * * * cd /Users/maxi.moff/APT\ value/web && node src/scripts/data-loader/06_daily_sync.js --mode=daily >> sync_daily.log 2>&1
 
-# 매주 월요일 새벽 3시 - 최근 6개월 동기화
-0 3 * * 1 cd /Users/maxi.moff/APT\ value/web && node src/scripts/data-loader/06_daily_sync.js --mode=weekly >> sync_weekly.log 2>&1
+# 매주 화요일 새벽 5시 - 최근 6개월 동기화 + 신규 단지 보완 작업
+0 5 * * 2 cd /Users/maxi.moff/APT\ value/web && node src/scripts/data-loader/06_daily_sync.js --mode=weekly >> sync_weekly.log 2>&1
 ```
+
+#### 🔧 주간 모드 추가 작업 (weekly only)
+- **displayName 업데이트**: 카카오 검색으로 신규 단지 표시명 수집 (최대 200개)
+- **좌표 수집**: 좌표 없는 단지에 카카오 지오코딩으로 좌표 추가 (최대 100개)
+- **K-apt 매핑**: 미매핑 단지에 지번 기반 K-apt 코드 매핑 시도 (최대 100개)
 
 | 기능 | 설명 |
 |------|------|

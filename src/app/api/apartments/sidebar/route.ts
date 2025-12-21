@@ -59,17 +59,12 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // kaptCode를 찾았으면 기존 sidebar API로 리다이렉트
+        // kaptCode를 찾았으면 해당 경로로 리다이렉트 (self-fetch 대신 redirect 사용)
         const kaptCode = rows[0].kaptCode;
 
-        // 직접 redirect 대신 내부 호출로 처리
-        const baseUrl = request.nextUrl.origin;
-        const sidebarUrl = `${baseUrl}/api/apartments/${kaptCode}/sidebar`;
-
-        const response = await fetch(sidebarUrl);
-        const data = await response.json();
-
-        return NextResponse.json(data);
+        // 리다이렉트를 통해 /api/apartments/[id]/sidebar로 전달
+        const redirectUrl = new URL(`/api/apartments/${kaptCode}/sidebar`, request.url);
+        return NextResponse.redirect(redirectUrl, 307);
 
     } catch (error) {
         console.error('Sidebar API Error:', error);
