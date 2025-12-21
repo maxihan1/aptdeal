@@ -20,6 +20,7 @@ interface HeaderProps {
 
 function Header({ onMenuClick, viewMode, onViewModeChange, showViewModeToggle = true }: HeaderProps) {
   const router = useRouter();
+  const isMapMode = viewMode === 'map';
 
   const handleHeaderClick = () => {
     // 로고 클릭시 항상 홈으로
@@ -31,13 +32,15 @@ function Header({ onMenuClick, viewMode, onViewModeChange, showViewModeToggle = 
       <div className="w-full px-4">
         <div className="flex items-center justify-between h-14 sm:h-16">
           <div className="flex items-center gap-3">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={onMenuClick}
-              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-accent text-foreground focus:outline-none"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
+            {/* Mobile Menu Button - 맵 모드에서는 숨김 */}
+            {!isMapMode && (
+              <button
+                onClick={onMenuClick}
+                className="lg:hidden p-2 -ml-2 rounded-md hover:bg-accent text-foreground focus:outline-none"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+            )}
 
             <div
               onClick={handleHeaderClick}
@@ -116,8 +119,12 @@ function ClientLayoutContent({
   }, [pathname, searchParams]);
 
   const isRegionPage = pathname.startsWith("/region");
+  const isAptPage = pathname.startsWith("/apt");
   const sidebarOnly = searchParams.get("sidebarOnly") === "1";
   const isHomePage = pathname === "/";
+
+  // 리스트/맵 토글 표시: 홈, 지역 페이지, 단지 상세 페이지에서 표시 (sidebarOnly 제외)
+  const showViewModeToggle = (isHomePage || isRegionPage || isAptPage) && !sidebarOnly;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground transition-colors duration-300">
@@ -125,7 +132,7 @@ function ClientLayoutContent({
         onMenuClick={() => setIsMobileMenuOpen(true)}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
-        showViewModeToggle={isHomePage && !sidebarOnly}
+        showViewModeToggle={showViewModeToggle}
       />
 
       <div className="flex flex-1 overflow-hidden w-full max-w-screen-2xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-4 gap-4 relative">

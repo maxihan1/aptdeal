@@ -87,13 +87,8 @@ export default function RegionSidebar({
                 if (parentName) {
                     params.set('parent', parentName);
                 }
-                // bounds가 있으면 현재 화면 영역으로 필터링
-                if (bounds) {
-                    params.set('swLat', bounds.sw.lat.toString());
-                    params.set('swLng', bounds.sw.lng.toString());
-                    params.set('neLat', bounds.ne.lat.toString());
-                    params.set('neLng', bounds.ne.lng.toString());
-                }
+                // bounds 필터링 제거 - 지도 이동으로 인한 재호출 방지
+                // 지역 클릭 시 해당 지역의 모든 하위 지역을 표시
 
                 const response = await fetch(`/api/map/regions/children?${params}`);
 
@@ -112,7 +107,7 @@ export default function RegionSidebar({
         }
 
         loadChildren();
-    }, [regionType, regionName, parentName, isOpen, bounds]);
+    }, [regionType, regionName, parentName, isOpen]); // bounds 의존성 제거
 
     // 사이드바가 닫힐 때 데이터 초기화
     useEffect(() => {
@@ -143,7 +138,7 @@ export default function RegionSidebar({
             {/* Sidebar */}
             <div
                 className={cn(
-                    "fixed left-0 top-0 h-full bg-background border-r shadow-xl z-50",
+                    "fixed left-0 top-0 h-[100dvh] bg-background border-r shadow-xl z-50",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",
                     isOpen ? "translate-x-0" : "-translate-x-full",
@@ -169,8 +164,8 @@ export default function RegionSidebar({
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="h-[calc(100%-60px)] overflow-y-auto scrollbar-hide">
+                {/* Content - pb-safe for iOS safe area */}
+                <div className="h-[calc(100dvh-60px)] overflow-y-auto scrollbar-hide pb-[env(safe-area-inset-bottom)]">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />

@@ -156,7 +156,7 @@ export default function MapSidebar({
             {/* Sidebar */}
             <div
                 className={cn(
-                    "fixed left-0 top-0 h-full bg-background border-r shadow-xl z-50",
+                    "fixed left-0 top-0 h-[100dvh] bg-background border-r shadow-xl z-50",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",
                     isOpen ? "translate-x-0" : "-translate-x-full",
@@ -174,8 +174,8 @@ export default function MapSidebar({
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="h-[calc(100%-48px)] overflow-y-auto scrollbar-hide">
+                {/* Content - pb-safe for iOS safe area */}
+                <div className="h-[calc(100dvh-48px)] overflow-y-auto scrollbar-hide pb-[env(safe-area-inset-bottom)]">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />

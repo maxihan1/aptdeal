@@ -193,9 +193,21 @@ export default function KakaoMap({
                     </div>
                 `;
 
-                // 클릭 이벤트 추가
-                content.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                // 클릭 이벤트 추가 - touch와 click 분리 처리
+                let touchMoved = false;
+                content.addEventListener('touchstart', () => {
+                    touchMoved = false;
+                }, { passive: true });
+                content.addEventListener('touchmove', () => {
+                    touchMoved = true;
+                }, { passive: true });
+                content.addEventListener('touchend', (e) => {
+                    if (!touchMoved && onRegionClick) {
+                        e.preventDefault();
+                        onRegionClick(region);
+                    }
+                });
+                content.addEventListener('click', () => {
                     if (onRegionClick) {
                         onRegionClick(region);
                     }
@@ -232,10 +244,21 @@ export default function KakaoMap({
         <div class="apt-marker-arrow"></div>
       `;
 
-            content.addEventListener('click', (e) => {
-                e.stopPropagation();
-                handleApartmentClick(apt);
+            // 클릭 이벤트 추가 - touch와 click 분리 처리
+            let touchMoved = false;
+            content.addEventListener('touchstart', () => {
+                touchMoved = false;
+            }, { passive: true });
+            content.addEventListener('touchmove', () => {
+                touchMoved = true;
+            }, { passive: true });
+            content.addEventListener('touchend', (e) => {
+                if (!touchMoved) {
+                    e.preventDefault();
+                    handleApartmentClick(apt);
+                }
             });
+            content.addEventListener('click', () => handleApartmentClick(apt));
 
             const overlay = new window.kakao.maps.CustomOverlay({
                 map,

@@ -317,7 +317,6 @@ export default function MapContainer({
                 onClose={handleRegionSidebarClose}
                 onRegionClick={handleChildRegionClick}
                 onApartmentClick={handleChildApartmentClick}
-                bounds={isRegionSidebarOpen ? currentBounds : undefined}
             />
 
             {/* 지도 */}
