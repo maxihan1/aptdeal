@@ -29,7 +29,7 @@ export function KakaoMapProvider({ children }: KakaoMapProviderProps) {
             return;
         }
 
-        const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+        const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '7f8cd69cf60e1a67aca32539cac8bd86';
 
         if (!KAKAO_JS_KEY) {
             setError('Kakao JavaScript Key is not configured');
