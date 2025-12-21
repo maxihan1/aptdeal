@@ -8,6 +8,7 @@
 
 import { executeQuery, testConnection, closeConnection } from './utils/db.js';
 import { log, logError, logSuccess, logSection } from './utils/logger.js';
+import { fileURLToPath } from 'url';
 
 const CREATE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS region_price_cache (
@@ -267,8 +268,10 @@ async function main() {
     logSuccess('\n✅ 지역별 가격 캐시 생성 완료!');
 }
 
-// 직접 실행 시
-main().catch(error => {
-    logError('스크립트 실행 실패:', error);
-    process.exit(1);
-});
+// 직접 실행 시에만 main 함수 실행
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch(error => {
+        logError('스크립트 실행 실패:', error);
+        process.exit(1);
+    });
+}

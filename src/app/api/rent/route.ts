@@ -93,19 +93,45 @@ export async function GET(request: NextRequest) {
 
         const rows = await executeQuery(query, params) as RentRow[];
 
+        // displayName 조회 (소량 조회 시에만 성능을 위해)
+        let displayNameMap: Map<string, string> = new Map();
+        if (rows.length > 0) {
+            // rows에서 유니크한 (aptNm, umdNm) 조합 추출
+            const uniqueApts = [...new Set(rows.map(r => `${r.aptNm}|${r.umdNm}`))];
+
+            // apt_search_index에서 displayName 조회
+            const displayQuery = `
+                SELECT aptNm, umdNm, COALESCE(displayName, aptNm) as displayName
+                FROM apt_search_index
+                WHERE CONCAT(aptNm, '|', umdNm) IN (${uniqueApts.map(() => '?').join(',')})
+            `;
+            try {
+                const displayRows = await executeQuery(displayQuery, uniqueApts) as { aptNm: string, umdNm: string, displayName: string }[];
+                displayRows.forEach(row => {
+                    displayNameMap.set(`${row.aptNm}|${row.umdNm}`, row.displayName || row.aptNm);
+                });
+            } catch (err) {
+                console.warn('Failed to fetch displayNames for rent', err);
+            }
+        }
+
         // 프론트엔드 RentDeal 인터페이스에 맞게 변환
-        const rentDeals = rows.map((row, index) => ({
-            id: row.id?.toString() || `rent-${index}`,
-            region: `${row.as1} ${row.as2} ${row.umdNm || ''}`.trim(),
-            aptName: row.aptNm || '',
-            area: Number(row.excluUseAr) || 0,
-            deposit: Number(row.deposit) || 0,
-            rent: Number(row.monthlyRent) || 0,
-            date: `${row.dealYear}-${String(row.dealMonth).padStart(2, '0')}-${String(row.dealDay).padStart(2, '0')}`,
-            rentType: row.contractType || '',
-            buildYear: Number(row.buildYear) || 0,
-            floor: Number(row.floor) || 0
-        }));
+        const rentDeals = rows.map((row, index) => {
+            const key = `${row.aptNm}|${row.umdNm}`;
+            return {
+                id: row.id?.toString() || `rent-${index}`,
+                region: `${row.as1} ${row.as2} ${row.umdNm || ''}`.trim(),
+                aptName: displayNameMap.get(key) || row.aptNm || '', // displayName 우선 사용
+                aptNm: row.aptNm || '', // 원본명 유지 (URL용)
+                area: Number(row.excluUseAr) || 0,
+                deposit: Number(row.deposit) || 0,
+                rent: Number(row.monthlyRent) || 0,
+                date: `${row.dealYear}-${String(row.dealMonth).padStart(2, '0')}-${String(row.dealDay).padStart(2, '0')}`,
+                rentType: row.contractType || '',
+                buildYear: Number(row.buildYear) || 0,
+                floor: Number(row.floor) || 0
+            };
+        });
 
         return NextResponse.json(rentDeals);
 

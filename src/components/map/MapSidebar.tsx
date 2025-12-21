@@ -20,6 +20,7 @@ type TabType = 'sales' | 'rent';
 interface ApartmentBasic {
     id: string;
     name: string;
+    displayName?: string;
     address: string;
     dong?: string;
     gu?: string;
@@ -131,6 +132,7 @@ export default function MapSidebar({
             d: dong,
             r: `${sido} ${sigungu} ${dong}`.trim(),
             t: 'trade',
+            n: apartment?.displayName || data.basic.name, // 디스플레이 네임 전달
         });
 
         // kaptCode가 있으면 추가
@@ -138,7 +140,7 @@ export default function MapSidebar({
             params.set('k', data.basic.id);
         }
 
-        window.location.href = `/apt/${encodeURIComponent(data.basic.name)}?${params.toString()}`;
+        window.location.href = `/apt/${encodeURIComponent(apartment?.name || data.basic.name)}?${params.toString()}`;
     };
 
     return (
@@ -186,7 +188,7 @@ export default function MapSidebar({
                         <div className="p-3 space-y-4">
                             {/* 기본 정보 (이름, 주소) */}
                             <div>
-                                <h3 className="font-bold text-lg mb-1">{data.basic.name}</h3>
+                                <h3 className="font-bold text-lg mb-1">{apartment?.displayName || data.basic.name}</h3>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <MapPin className="w-3 h-3 flex-shrink-0" />
                                     <span className="truncate">{data.basic.address}</span>

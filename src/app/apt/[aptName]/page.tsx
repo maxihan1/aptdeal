@@ -18,6 +18,7 @@ interface Deal {
   price: number;
   date: string;
   aptName: string;
+  aptNm?: string; // 원본명 추가
   aptDong?: string; // 동 정보 추가
   floor: string | number;
   buildYear: string | number;
@@ -179,8 +180,9 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       const noAptSuffixClean = noSpaceCleanAptName.replace(/아파트$/g, '');
 
       const filteredDeals = dongFilteredOnlyDeals.filter((deal) => {
-        if (!deal.aptName) return false;
-        const dealNameNormalized = deal.aptName.replace(/\s+/g, '').toLowerCase();
+        if (!deal.aptName && !deal.aptNm) return false;
+        // aptNm이 있으면 우선 사용 (원본명), 없으면 aptName 사용
+        const dealNameNormalized = (deal.aptNm || deal.aptName).replace(/\s+/g, '').toLowerCase();
 
         // 10가지 매칭 조건
         return (
@@ -357,7 +359,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       console.log('[Complex Detail] Setting info with detailedInfo:', detailedInfo);
 
       setInfo({
-        name: detailedInfo.kaptName || decodedAptName, // 정식 단지명 우선 표시
+        name: searchParams.get('n') || detailedInfo.kaptName || decodedAptName, // 파라미터로 명시된 이름 우선, 아니면 정식 단지명 우선 표시
         address: filteredDeals[0]?.address || '',
         region: filteredDeals[0]?.region || '',
         avgPrice: "",

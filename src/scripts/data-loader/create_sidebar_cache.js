@@ -5,6 +5,7 @@
 
 import 'dotenv/config';
 import { executeQuery, closeConnection } from './utils/db.js';
+import { fileURLToPath } from 'url';
 
 // 테이블 생성 (컬럼 추가)
 const CREATE_TABLE_SQL = `
@@ -350,8 +351,8 @@ export async function refreshSidebarCache() {
     }
 }
 
-// 직접 실행
-if (process.argv[1].includes('create_sidebar_cache')) {
+// 직접 실행 시에만 실행
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
     refreshSidebarCache()
         .then(() => closeConnection())
         .catch(err => {

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 export interface ApartmentMarker {
     id: string;
     name: string;
+    displayName?: string;
     address: string;
     lat: number;
     lng: number;

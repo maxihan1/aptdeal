@@ -145,6 +145,7 @@ export default function MapContainer({
             const marker: ApartmentMarker = {
                 id: result.kaptCode || result.aptNm,
                 name: result.aptNm,  // DB 조회용 원본 이름 사용
+                displayName: result.aptName, // 사용자 표시용 이름 (수진마을써니벨리 등)
                 address: result.region,
                 lat,
                 lng,

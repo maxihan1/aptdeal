@@ -533,6 +533,11 @@ async function refreshMapCaches() {
     const startTime = Date.now();
 
     try {
+        // 0. 아파트 가격 캐시 갱신 (추가)
+        log('📊 아파트 가격 캐시 갱신 중...');
+        const { refreshPriceCache } = await import('./create_price_cache.js');
+        await refreshPriceCache();
+
         // 1. 지역 가격 캐시 갱신
         log('📊 지역 가격 캐시 갱신 중...');
         const { refreshRegionCache } = await import('./create_region_cache.js');

@@ -26,6 +26,7 @@ interface Deal {
     price: number;
     date: string;
     aptName: string;
+    aptNm: string;
     floor: number;
     aptDong?: string;
     buildYear: number;
@@ -39,6 +40,7 @@ interface RentDeal {
     id: string;
     region: string;
     aptName: string;
+    aptNm: string;
     area: number;
     deposit: number;
     rent: number;
@@ -334,7 +336,7 @@ function SemanticRegionContent() {
                                                             </>
                                                         )}
                                                         <td className="py-2 text-center px-2">
-                                                            <Link href={`/apt/${encodeURIComponent(deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${dealType}`}>
+                                                            <Link href={`/apt/${encodeURIComponent(deal.aptNm || deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${dealType}&n=${encodeURIComponent(deal.aptName)}`}>
                                                                 <Button size="sm" variant="outline" onClick={() => trackAptDetail(deal.aptName)}>
                                                                     <TrendingUp className="w-4 h-4 mr-1" /> 상세
                                                                 </Button>
@@ -359,7 +361,7 @@ function SemanticRegionContent() {
                     {/* 모바일 리스트 */}
                     <div className="lg:hidden space-y-2">
                         {pagedDeals.map((deal: any) => (
-                            <Link key={deal.id} href={`/apt/${encodeURIComponent(deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${dealType}`}>
+                            <Link key={deal.id} href={`/apt/${encodeURIComponent(deal.aptNm || deal.aptName)}?s=${encodeURIComponent(sido)}&g=${encodeURIComponent(sigungu)}&d=${encodeURIComponent(dong)}&t=${dealType}&n=${encodeURIComponent(deal.aptName)}`}>
                                 <DealCard deal={{ ...deal, dealType }} />
                             </Link>
                         ))}

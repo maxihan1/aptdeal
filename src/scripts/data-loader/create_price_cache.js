@@ -6,6 +6,7 @@
 
 import { executeQuery, testConnection, closeConnection } from './utils/db.js';
 import { log, logError, logSuccess, logSection } from './utils/logger.js';
+import { fileURLToPath } from 'url';
 
 const CREATE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS apt_price_cache (
@@ -121,13 +122,13 @@ ON DUPLICATE KEY UPDATE
     updated_at = CURRENT_TIMESTAMP
 `;
 
-async function main() {
+export async function refreshPriceCache() {
     logSection('아파트 가격 캐시 테이블 생성');
 
     const connected = await testConnection();
     if (!connected) {
         logError('데이터베이스 연결 실패');
-        process.exit(1);
+        throw new Error('Database connection failed');
     }
 
     try {
@@ -154,7 +155,7 @@ async function main() {
         log('📊 가격 캐시 데이터 적재 중... (시간이 걸릴 수 있습니다)');
         const startTime = Date.now();
 
-        const result = await executeQuery(REFRESH_CACHE_SQL);
+        await executeQuery(REFRESH_CACHE_SQL);
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         logSuccess(`캐시 데이터 적재 완료 (${elapsed}초)`);
@@ -182,7 +183,7 @@ async function main() {
                         MAX(dealAmount) as last_price,
                         MAX(dealDate) as last_date
                     FROM apt_deal_info
-                    WHERE (cdealType IS NULL OR cdealType = '')
+                    WHERE (d.cdealType IS NULL OR d.cdealType = '')
                     GROUP BY REPLACE(REPLACE(aptNm, ' ', ''), '아파트', '')
                 ) d ON REPLACE(REPLACE(b.kaptName, ' ', ''), '아파트', '') = d.aptNmNorm COLLATE utf8mb4_0900_ai_ci
                 WHERE b.latitude IS NOT NULL
@@ -197,6 +198,7 @@ async function main() {
 
         const elapsed2 = ((Date.now() - startTime2) / 1000).toFixed(1);
         logSuccess(`직접 매칭 적재 완료 (${elapsed2}초)`);
+
 
         // 3. 통계 확인
         const stats = await executeQuery(`
@@ -218,14 +220,21 @@ async function main() {
     } catch (error) {
         logError('캐시 생성 실패:', error.message);
         throw error;
-    } finally {
-        await closeConnection();
     }
 
     logSuccess('\n✅ 가격 캐시 생성 완료!');
 }
 
-main().catch(error => {
-    logError('스크립트 실행 실패:', error);
-    process.exit(1);
-});
+// 직접 실행 시에만 실행
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    refreshPriceCache()
+        .then(async () => {
+            await closeConnection();
+            process.exit(0);
+        })
+        .catch(async (error) => {
+            logError('스크립트 실행 실패:', error);
+            await closeConnection();
+            process.exit(1);
+        });
+}

@@ -88,7 +88,8 @@ export default function AptSearchInput({ onSelect, className }: AptSearchInputPr
                 g: result.sigungu,
                 d: result.dong,
                 r: result.region,
-                t: "trade"
+                t: "trade",
+                n: result.aptName // 디스플레이 네임 전달
             });
             // kaptCode가 있으면 URL에 추가 (주소 기반 매핑)
             if (result.kaptCode) {
