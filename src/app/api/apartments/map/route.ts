@@ -37,11 +37,12 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '500');
 
     try {
-        // 좌표가 있는 아파트 조회 + 캐시된 가격 정보 (폴백 로직: 30일 → 90일 → 365일 → 마지막거래)
+        // 좌표가 있는 아파트 조회 + 캐시된 가격 정보 + displayName
         let query = `
             SELECT 
                 ab.kaptCode as id,
-                ab.kaptName as name,
+                COALESCE(si.displayName, ab.kaptName) as name,
+                ab.kaptName as kaptName,
                 ab.kaptAddr as address,
                 ab.latitude as lat,
                 ab.longitude as lng,
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
                 COALESCE(pc.is_rental, FALSE) as isRental
             FROM apt_basic_info ab
             LEFT JOIN apt_price_cache pc ON ab.kaptCode COLLATE utf8mb4_unicode_ci = pc.kapt_code COLLATE utf8mb4_unicode_ci
+            LEFT JOIN apt_search_index si ON ab.kaptCode COLLATE utf8mb4_unicode_ci = si.kapt_code COLLATE utf8mb4_unicode_ci
             WHERE ab.latitude IS NOT NULL 
               AND ab.longitude IS NOT NULL
               AND (

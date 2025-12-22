@@ -59,13 +59,37 @@ export async function GET(request: NextRequest) {
     const dong = searchParams.get('dong');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const aptName = searchParams.get('aptName'); // 단지명 필터 (성능 최적화)
+    let aptName = searchParams.get('aptName'); // 단지명 필터 (성능 최적화)
+    const kaptCode = searchParams.get('kaptCode'); // kaptCode로 정확한 단지명 조회
     const limitParam = searchParams.get('limit');
     // Default limit reduced for performance
     const limit = limitParam ? Number(limitParam) : (aptName ? 3000 : 5000);
 
     const offsetParam = searchParams.get('offset');
     const offset = offsetParam ? Number(offsetParam) : 0;
+
+    // kaptCode가 있으면 apt_name_mapping에서 deal_apt_name 조회
+    if (kaptCode) {
+      try {
+        const mappingResult = await executeQuery(`
+          SELECT deal_apt_name 
+          FROM apt_name_mapping 
+          WHERE kapt_code = ? 
+          LIMIT 1
+        `, [kaptCode]) as { deal_apt_name: string }[];
+
+        if (mappingResult.length > 0 && mappingResult[0].deal_apt_name) {
+          aptName = mappingResult[0].deal_apt_name;
+          console.log(`[Deals API] Mapping found: kaptCode=${kaptCode} -> aptName=${aptName}`);
+        } else {
+          // 매핑이 없으면 로그 남기고 aptName 파라미터 그대로 사용
+          console.warn(`[Deals API] No mapping for kaptCode: ${kaptCode}, falling back to aptName: ${aptName || '(none)'}`);
+        }
+      } catch (mappingError) {
+        console.error(`[Deals API] Mapping query error:`, mappingError);
+        // 에러 시 aptName 파라미터 그대로 사용
+      }
+    }
 
     let query = '';
     let newParams: (string | number)[] = [];
@@ -75,8 +99,23 @@ export async function GET(request: NextRequest) {
     // 항상 displayName 조회 (정식 단지명 표시용)
     const includeDisplayName = true;
 
-    // CASE 1: 지역 필터 있음 (sido, sigungu) -> 기존 로직 (JOIN 최적화)
+    // CASE 1: 지역 필터 있음 (sido, sigungu) -> 기존 로직 (최적화됨)
     if (sido && sigungu) {
+      // 1단계: sido + sigungu로 sggCd 조회 (간단한 인덱스 쿼리)
+      const sggQuery = sido === '세종특별자치시'
+        ? `SELECT LEFT(bjdCode, 5) as sggCode FROM apt_list WHERE as1 = ? LIMIT 1`
+        : `SELECT LEFT(bjdCode, 5) as sggCode FROM apt_list WHERE as1 = ? AND as2 = ? LIMIT 1`;
+
+      const sggParams = sido === '세종특별자치시' ? [sido] : [sido, sigungu];
+      const sggResult = await executeQuery(sggQuery, sggParams) as { sggCode: string }[];
+
+      if (sggResult.length === 0) {
+        return NextResponse.json([]);
+      }
+
+      const sggCode = sggResult[0].sggCode;
+
+      // 2단계: sggCd로 직접 조회 (JOIN 없이 인덱스 활용)
       query = `
               SELECT
                 d.id,
@@ -94,25 +133,13 @@ export async function GET(request: NextRequest) {
                 d.buildYear,
                 d.dealingGbn,
                 d.cdealType,
-                l.as1,
-                l.as2,
+                ? as as1,
+                ? as as2,
                 d.umdNm as as3
               FROM apt_deal_info d
-              JOIN (
-                  SELECT LEFT(bjdCode, 5) as sggCode, 
-                         MAX(as1) as as1, MAX(as2) as as2
-                  FROM apt_list
-                  WHERE as1 = ? ${sido === '세종특별자치시' ? '' : 'AND as2 = ?'}
-                  GROUP BY LEFT(bjdCode, 5)
-              ) l ON d.sggCd = l.sggCode COLLATE utf8mb4_unicode_ci
-              WHERE 1=1
+              WHERE d.sggCd = ?
             `;
-      // 세종특별자치시는 sigungu 파라미터 불필요
-      if (sido === '세종특별자치시') {
-        newParams.push(sido);
-      } else {
-        newParams.push(sido, sigungu);
-      }
+      newParams.push(sido, sigungu, sggCode);
 
       if (startDate && endDate) {
         query += ` AND d.dealDate >= ? AND d.dealDate <= ? `;

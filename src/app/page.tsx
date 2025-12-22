@@ -27,7 +27,7 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 
 export default function Home() {
   const searchParams = useSearchParams();
-  const viewMode = searchParams.get('view') || 'list';
+  const viewMode = searchParams.get('view') || 'map';
 
   const [globalSido, setGlobalSido] = useState<string>("ALL");
 

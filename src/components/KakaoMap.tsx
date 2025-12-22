@@ -336,9 +336,9 @@ export default function KakaoMap({
                 </button>
             </div>
 
-            {/* 아파트 수 표시 */}
-            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border shadow-lg rounded-lg px-3 py-2 z-10">
-                <span className="text-sm font-medium">
+            {/* 아파트 수 표시 - 왼쪽 하단 */}
+            <div className="absolute bottom-20 left-3 sm:left-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 shadow-lg rounded-lg px-3 py-1.5 z-10">
+                <span className="text-xs sm:text-sm font-medium text-zinc-200">
                     {apartments.length}개 단지
                 </span>
             </div>

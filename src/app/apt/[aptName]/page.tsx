@@ -110,6 +110,9 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
       const rentCacheKey = `${baseCacheKey}|rent`;
 
       // 매매와 전월세 데이터를 병렬로 fetch
+      // kaptCode가 있으면 정확한 단지 매칭을 위해 함께 전달
+      const kaptCodeParam = kaptCode ? `&kaptCode=${encodeURIComponent(kaptCode)}` : '';
+
       const [tradeDeals, rentDealsData] = await Promise.all([
         // 매매 데이터
         (async () => {
@@ -118,7 +121,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             return dealCache[tradeCacheKey];
           }
           const res = await fetch(
-            `/api/deals?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
+            `/api/deals?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}${kaptCodeParam}`
           );
           const data = await res.json();
           dealCache[tradeCacheKey] = data;
@@ -131,7 +134,7 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
             return dealCache[rentCacheKey];
           }
           const res = await fetch(
-            `/api/rent?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}`
+            `/api/rent?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&dong=${encodeURIComponent(dong)}&startDate=${startDate}&endDate=${endDate}&aptName=${encodeURIComponent(decodedAptName)}${kaptCodeParam}`
           );
           const data = await res.json();
           dealCache[rentCacheKey] = data;
@@ -181,6 +184,12 @@ function ComplexDetailPage({ params }: { params: Promise<{ aptName: string }> })
 
       const filteredDeals = dongFilteredOnlyDeals.filter((deal) => {
         if (!deal.aptName && !deal.aptNm) return false;
+
+        // kaptCode가 있으면 API에서 이미 정확한 단지만 반환했으므로 추가 필터링 불필요
+        if (kaptCode) {
+          return true;
+        }
+
         // aptNm이 있으면 우선 사용 (원본명), 없으면 aptName 사용
         const dealNameNormalized = (deal.aptNm || deal.aptName).replace(/\s+/g, '').toLowerCase();
 

@@ -97,11 +97,12 @@ export async function GET(request: NextRequest) {
 
         const kaptCode = findRows[0].kaptCode;
 
-        // kaptCode로 전체 사이드바 데이터 조회 (기존 [id]/sidebar 로직)
+        // kaptCode로 전체 사이드바 데이터 조회 (displayName 포함)
         const [rows] = await pool.query<RowDataPacket[]>(`
             SELECT 
                 ab.kaptCode,
-                ab.kaptName as name,
+                COALESCE(si.displayName, ab.kaptName) as name,
+                ab.kaptName as kaptName,
                 ab.kaptAddr as address,
                 ab.kaptDongCnt as dongCount,
                 ab.kaptdEcntp as parkingRatio,
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
             FROM apt_basic_info ab
             LEFT JOIN apt_price_cache pc ON pc.kapt_code COLLATE utf8mb4_unicode_ci = ab.kaptCode COLLATE utf8mb4_unicode_ci
             LEFT JOIN apt_sidebar_cache sc ON sc.kapt_code COLLATE utf8mb4_unicode_ci = ab.kaptCode COLLATE utf8mb4_unicode_ci
+            LEFT JOIN apt_search_index si ON si.kapt_code COLLATE utf8mb4_unicode_ci = ab.kaptCode COLLATE utf8mb4_unicode_ci
             WHERE ab.kaptCode = ?
         `, [kaptCode]);
 

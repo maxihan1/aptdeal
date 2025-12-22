@@ -5,11 +5,10 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense, useCallback } from "react";
 import { pageview } from "@/lib/gtag";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/mode-toggle";
 import ViewModeToggle, { ViewMode } from "@/components/ViewModeToggle";
 import { KakaoMapProvider } from "@/components/KakaoMapProvider";
 
-import { Menu } from "lucide-react";
+import { Menu, List } from "lucide-react";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -63,10 +62,6 @@ function Header({ onMenuClick, viewMode, onViewModeChange, showViewModeToggle = 
                 onChange={onViewModeChange}
               />
             )}
-            <div className="hidden lg:block text-sm text-muted-foreground font-medium">
-              전국 아파트 실거래가 조회
-            </div>
-            <ModeToggle />
           </div>
         </div>
       </div>
@@ -86,22 +81,19 @@ function ClientLayoutContent({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // View Mode 상태 (URL에서 읽기)
-  const viewMode = (searchParams.get('view') as ViewMode) || 'list';
+  // View Mode 상태 (URL에서 읽기) - 기본값: map
+  const viewMode = (searchParams.get('view') as ViewMode) || 'map';
 
   // View Mode 변경 핸들러
   const handleViewModeChange = useCallback((mode: ViewMode) => {
-    if (mode === 'map') {
-      // 지도 모드로 전환 시 항상 홈페이지로 이동
-      router.push('/?view=map');
+    if (mode === 'list') {
+      // 리스트 모드로 전환 시 홈페이지로 이동
+      router.push('/?view=list');
     } else {
-      // 리스트 모드로 전환 시 현재 페이지에서 view 파라미터 제거
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('view');
-      const queryString = params.toString();
-      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+      // 지도 모드로 전환 시 view 파라미터 제거 (기본값이 map이므로)
+      router.push('/', { scroll: false });
     }
-  }, [pathname, searchParams, router]);
+  }, [router]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -129,6 +121,50 @@ function ClientLayoutContent({
   // 리스트/맵 토글 표시: 홈, 지역 페이지, 단지 상세 페이지에서 표시 (sidebarOnly 제외)
   const showViewModeToggle = (isHomePage || isRegionPage || isAptPage) && !sidebarOnly;
 
+  // 지도 모드: 전체 화면 레이아웃 (모바일 친화적 헤더)
+  if (viewMode === 'map' && isHomePage) {
+    return (
+      <div className="relative w-full h-screen overflow-hidden bg-background flex flex-col">
+        {/* 지도 모드 헤더 */}
+        <header className="flex-shrink-0 h-12 sm:h-14 bg-zinc-900/95 backdrop-blur-md border-b border-zinc-700/50 flex items-center justify-between px-3 sm:px-4 z-50">
+          {/* 왼쪽: 로고 */}
+          <div
+            onClick={() => handleViewModeChange('list')}
+            className="flex items-center space-x-2 cursor-pointer"
+          >
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-extrabold text-sm">A</span>
+            </div>
+            <span className="hidden sm:inline text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+              APTDEAL
+            </span>
+          </div>
+
+          {/* 가운데: 현재 지역 (지도에서 전달받을 예정) */}
+          <div className="flex-1 text-center px-2">
+            <span className="text-xs sm:text-sm text-zinc-400 truncate block" id="map-current-region">
+              전국 아파트 지도
+            </span>
+          </div>
+
+          {/* 오른쪽: 시장분석 버튼 */}
+          <button
+            onClick={() => handleViewModeChange('list')}
+            className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-zinc-800/80 rounded-lg border border-zinc-700/50 hover:bg-zinc-700/80 transition-colors text-xs sm:text-sm font-medium text-zinc-200"
+          >
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">시장분석</span>
+          </button>
+        </header>
+
+        {/* 전체 화면 컨텐츠 (지도) */}
+        <main className="flex-1 w-full overflow-hidden">
+          {children ?? null}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground transition-colors duration-300">
       <Header
@@ -139,8 +175,8 @@ function ClientLayoutContent({
       />
 
       <div className="flex flex-1 overflow-hidden w-full max-w-screen-2xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-4 gap-4 relative">
-        {/* Desktop Sidebar - 지도 모드일 때는 숨김 */}
-        {!sidebarOnly && viewMode !== 'map' && (
+        {/* Desktop Sidebar */}
+        {!sidebarOnly && (
           <Sidebar className="hidden lg:block w-64 flex-shrink-0 h-screen overflow-y-auto rounded-lg border border-border bg-card shadow-sm" />
         )}
 
@@ -160,7 +196,7 @@ function ClientLayoutContent({
           </div>
         )}
 
-        {/* Sidebar Only Mode (Legacy support if needed, but mainly we use Overlay now) */}
+        {/* Sidebar Only Mode */}
         {sidebarOnly ? (
           <Sidebar className="w-full h-full" />
         ) : (
@@ -182,8 +218,7 @@ export default function ClientLayout({
     <Suspense>
       <ThemeProvider
         attribute="class"
-        defaultTheme="dark"
-        enableSystem
+        forcedTheme="dark"
         disableTransitionOnChange
       >
         <KakaoMapProvider>

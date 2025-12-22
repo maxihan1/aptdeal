@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
             const [rows] = await pool.query<RowDataPacket[]>(`
                 SELECT 
                     ab.kaptCode as id,
-                    ab.kaptName as name,
+                    COALESCE(si.displayName, ab.kaptName) as name,
                     ab.kaptAddr as address,
                     ab.hoCnt as householdCount,
                     ab.kaptDongCnt as dongCount,
@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
                     pc.last_deal_price as lastDealPrice
                 FROM apt_basic_info ab
                 LEFT JOIN apt_price_cache pc ON pc.kapt_code COLLATE utf8mb4_unicode_ci = ab.kaptCode COLLATE utf8mb4_unicode_ci
+                LEFT JOIN apt_search_index si ON si.kapt_code COLLATE utf8mb4_unicode_ci = ab.kaptCode COLLATE utf8mb4_unicode_ci
                 WHERE ab.kaptAddr LIKE ?
                   AND ab.latitude IS NOT NULL
                   ${boundsCondition}

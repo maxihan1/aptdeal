@@ -135,10 +135,11 @@ export default function RegionSidebar({
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar - Glassmorphism style */}
             <div
                 className={cn(
-                    "fixed left-0 top-0 h-[100dvh] bg-background border-r shadow-xl z-50",
+                    "fixed left-0 top-0 h-[100dvh] z-50",
+                    "bg-zinc-900/85 backdrop-blur-xl border-r border-zinc-700/50 shadow-2xl",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",
                     isOpen ? "translate-x-0" : "-translate-x-full",
@@ -146,7 +147,7 @@ export default function RegionSidebar({
                 )}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-primary/10 to-primary/5">
+                <div className="flex items-center justify-between p-3 border-b border-zinc-700/50 bg-zinc-800/50">
                     <div>
                         <h2 className="font-bold text-base">{getTitle()}</h2>
                         {data && (

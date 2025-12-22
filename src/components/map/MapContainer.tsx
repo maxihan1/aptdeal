@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import KakaoMap, { ApartmentMarker, RegionMarker } from '../KakaoMap';
 import MapSidebar from './MapSidebar';
 import RegionSidebar from './RegionSidebar';
@@ -83,6 +83,74 @@ export default function MapContainer({
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
+
+    // 헤더 지역 표시 업데이트 (지역/아파트 선택 시)
+    useEffect(() => {
+        const headerRegion = document.getElementById('map-current-region');
+        if (headerRegion) {
+            if (selectedRegion) {
+                // parentName이 있으면 전체 경로 표시
+                const fullPath = selectedRegion.parentName
+                    ? `${selectedRegion.parentName} ${selectedRegion.name}`
+                    : selectedRegion.name;
+                headerRegion.textContent = fullPath;
+            } else if (selectedApartment) {
+                // 아파트 선택 시 아파트 이름 표시
+                headerRegion.textContent = selectedApartment.name;
+            }
+            // 선택된 것이 없으면 지도 중심 기반 주소가 표시됨 (아래 useEffect에서 처리)
+        }
+    }, [selectedRegion, selectedApartment]);
+
+    // 지도 중심 기반 역지오코딩 (디바운스)
+    const reverseGeocodeTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+
+    const updateHeaderFromMapCenter = useCallback((lat: number, lng: number) => {
+        // 선택된 지역이나 아파트가 있으면 업데이트하지 않음
+        if (selectedRegion || selectedApartment) return;
+
+        // 이전 타이머 취소
+        if (reverseGeocodeTimerRef.current) {
+            clearTimeout(reverseGeocodeTimerRef.current);
+        }
+
+        // 디바운스 (500ms)
+        reverseGeocodeTimerRef.current = setTimeout(async () => {
+            try {
+                // Kakao 역지오코딩 API 호출
+                const res = await fetch(
+                    `/api/geocode/reverse?lat=${lat}&lng=${lng}`
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    const headerRegion = document.getElementById('map-current-region');
+                    if (headerRegion && data.address) {
+                        headerRegion.textContent = data.address;
+                    }
+                }
+            } catch (e) {
+                // 에러 무시
+            }
+        }, 500);
+    }, [selectedRegion, selectedApartment]);
+
+    // onBoundsChange에서 지도 중심 업데이트
+    const handleBoundsChange = useCallback((bounds: MapBounds) => {
+        setCurrentBounds(bounds);
+        onBoundsChange?.(bounds);
+
+        // 지도 중심 계산
+        const centerLat = (bounds.sw.lat + bounds.ne.lat) / 2;
+        const centerLng = (bounds.sw.lng + bounds.ne.lng) / 2;
+
+        // 중심이 크게 변경되었을 때만 역지오코딩
+        const last = lastCenterRef.current;
+        if (!last || Math.abs(last.lat - centerLat) > 0.01 || Math.abs(last.lng - centerLng) > 0.01) {
+            lastCenterRef.current = { lat: centerLat, lng: centerLng };
+            updateHeaderFromMapCenter(centerLat, centerLng);
+        }
+    }, [onBoundsChange, updateHeaderFromMapCenter]);
 
     // 검색 함수
     const handleSearch = useCallback(async (query: string) => {
@@ -226,31 +294,37 @@ export default function MapContainer({
     }, [selectedRegion]);
 
     // 하위 아파트 클릭
-    const handleChildApartmentClick = useCallback((apt: { id?: string; name: string; address?: string }) => {
+    const handleChildApartmentClick = useCallback((apt: { id?: string; name: string; address?: string; lat?: number; lng?: number }) => {
+        // 좌표가 있으면 지도 이동
+        if (apt.lat && apt.lng) {
+            setMapCenter({ lat: apt.lat, lng: apt.lng });
+            setMapLevel(2); // 아파트 상세 레벨
+        }
+
         if (apt.id) {
             const marker: ApartmentMarker = {
                 id: apt.id,
                 name: apt.name,
                 address: apt.address || '',
-                lat: 0,
-                lng: 0,
+                lat: apt.lat || 0,
+                lng: apt.lng || 0,
                 avgPrice: 0,
             };
             setSelectedApartment(marker);
             setIsApartmentSidebarOpen(true);
             setIsRegionSidebarOpen(false);
         }
-    }, []); // Removed isMobile dependency as it's no longer used here
+    }, []);
 
     return (
         <div
             className={cn("relative w-full h-full", className)}
             style={{ touchAction: 'manipulation' }}
         >
-            {/* 플로팅 검색바 */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-md">
+            {/* 플로팅 검색바 - HUD 스타일 */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-[85%] sm:w-[90%] max-w-md">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -260,10 +334,10 @@ export default function MapContainer({
                         }}
                         onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
                         placeholder="아파트 검색..."
-                        className="w-full pl-9 pr-9 py-2.5 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/50 dark:border-zinc-700/50 rounded-lg shadow-lg text-base focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full pl-9 pr-9 py-2.5 bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 rounded-lg shadow-lg text-base text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                     />
                     {isSearching && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-zinc-400" />
                     )}
                     {searchQuery && !isSearching && (
                         <button
@@ -274,23 +348,23 @@ export default function MapContainer({
                             }}
                             className="absolute right-3 top-1/2 -translate-y-1/2"
                         >
-                            <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                            <X className="h-4 w-4 text-zinc-400 hover:text-zinc-200" />
                         </button>
                     )}
                 </div>
 
-                {/* 검색 결과 드롭다운 */}
+                {/* 검색 결과 드롭다운 - HUD 스타일 */}
                 {showSearchResults && searchResults.length > 0 && (
-                    <div className="mt-1 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/50 dark:border-zinc-700/50 rounded-lg shadow-lg overflow-hidden">
+                    <div className="mt-1 bg-zinc-900/90 backdrop-blur-xl border border-zinc-700/50 rounded-lg shadow-lg overflow-hidden">
                         <ul className="max-h-64 overflow-y-auto">
                             {searchResults.map((result, index) => (
                                 <li
                                     key={`${result.aptNm}-${result.dong}-${index}`}
                                     onClick={() => handleSearchSelect(result)}
-                                    className="px-4 py-2.5 cursor-pointer text-sm hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                                    className="px-4 py-2.5 cursor-pointer text-sm hover:bg-zinc-800/80 transition-colors text-zinc-100"
                                 >
                                     <div className="font-medium">{result.aptName}</div>
-                                    <div className="text-xs text-muted-foreground truncate">{result.region}</div>
+                                    <div className="text-xs text-zinc-400 truncate">{result.region}</div>
                                 </li>
                             ))}
                         </ul>
@@ -333,12 +407,7 @@ export default function MapContainer({
                 onApartmentClick={handleApartmentClick}
                 onRegionClick={handleRegionClick}
                 selectedApartmentId={selectedApartment?.id}
-                onBoundsChange={(bounds) => {
-                    if (bounds.sw && bounds.ne) {
-                        setCurrentBounds({ sw: bounds.sw, ne: bounds.ne });
-                    }
-                    onBoundsChange?.(bounds);
-                }}
+                onBoundsChange={handleBoundsChange}
             />
         </div>
     );
