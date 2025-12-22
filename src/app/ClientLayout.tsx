@@ -91,13 +91,16 @@ function ClientLayoutContent({
 
   // View Mode 변경 핸들러
   const handleViewModeChange = useCallback((mode: ViewMode) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (mode === 'list') {
-      params.delete('view');
+    if (mode === 'map') {
+      // 지도 모드로 전환 시 항상 홈페이지로 이동
+      router.push('/?view=map');
     } else {
-      params.set('view', mode);
+      // 리스트 모드로 전환 시 현재 페이지에서 view 파라미터 제거
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('view');
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
     }
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }, [pathname, searchParams, router]);
 
   useEffect(() => {
