@@ -185,12 +185,15 @@ async function updateRentTrend() {
             SELECT 
                 aptNm COLLATE utf8mb4_unicode_ci as aptNm,
                 CONCAT(dealYear, '-', LPAD(dealMonth, 2, '0')) as month,
-                CONCAT(ROUND(excluUseAr), '㎡') as areaType,
+                CONCAT(roundedArea, '㎡') as areaType,
                 ROUND(AVG(deposit)) as avgDeposit
-            FROM apt_rent_info
-            WHERE monthlyRent = 0
-              AND CONCAT(dealYear, '-', LPAD(dealMonth, 2, '0')) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 36 MONTH), '%Y-%m')
-            GROUP BY aptNm, month, ROUND(excluUseAr)
+            FROM (
+                SELECT aptNm, dealYear, dealMonth, deposit, ROUND(excluUseAr) as roundedArea
+                FROM apt_rent_info
+                WHERE monthlyRent = 0
+                  AND CONCAT(dealYear, '-', LPAD(dealMonth, 2, '0')) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 36 MONTH), '%Y-%m')
+            ) sub
+            GROUP BY aptNm, dealYear, dealMonth, roundedArea
         ) trend ON anm.deal_apt_name COLLATE utf8mb4_unicode_ci = trend.aptNm
         ORDER BY anm.kapt_code, trend.month, trend.areaType
     `);
