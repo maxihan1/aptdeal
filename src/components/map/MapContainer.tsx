@@ -5,7 +5,6 @@ import KakaoMap, { ApartmentMarker, RegionMarker } from '../KakaoMap';
 import MapSidebar from './MapSidebar';
 import RegionSidebar from './RegionSidebar';
 import { MapFilterBar, MapFilters, DEFAULT_FILTERS } from './filter';
-import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 import { Search, Loader2, X } from 'lucide-react';
 
@@ -89,9 +88,6 @@ export default function MapContainer({
     // 필터 상태
     const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
 
-    // 즐겨찾기
-    const { favorites, count: favoritesCount, isFavorite, toggleFavorite } = useFavorites();
-
     // 필터링된 아파트 목록
     const filteredApartments = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -119,12 +115,9 @@ export default function MapContainer({
                 if (age > parseInt(filters.yearBuilt)) return false;
             }
 
-            // 즐겨찾기 필터
-            if (filters.favoritesOnly && !isFavorite(apt.id)) return false;
-
             return true;
         });
-    }, [apartments, filters, isFavorite]);
+    }, [apartments, filters]);
 
     // 헤더 지역 표시 업데이트 (지역/아파트 선택 시)
     useEffect(() => {
@@ -428,7 +421,6 @@ export default function MapContainer({
                 <MapFilterBar
                     filters={filters}
                     onFiltersChange={setFilters}
-                    favoritesCount={favoritesCount}
                 />
             </div>
 

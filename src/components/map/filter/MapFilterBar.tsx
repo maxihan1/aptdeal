@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Home, Key, Star, X } from 'lucide-react';
+import { Home, Key, X } from 'lucide-react';
 import { useCallback } from 'react';
 import { MapFilters, TransactionType, YearBuiltFilter, YEAR_BUILT_OPTIONS, DEFAULT_FILTERS } from './types';
 
@@ -18,7 +18,6 @@ interface MapFilterBarProps {
     filters: MapFilters;
     onFiltersChange: (filters: MapFilters) => void;
     onExpandedChange?: (expanded: boolean) => void;
-    favoritesCount: number;
     className?: string;
 }
 
@@ -26,7 +25,6 @@ export default function MapFilterBar({
     filters,
     onFiltersChange,
     onExpandedChange,
-    favoritesCount,
     className,
 }: MapFilterBarProps) {
 
@@ -38,9 +36,7 @@ export default function MapFilterBar({
         onFiltersChange({ ...filters, yearBuilt: year });
     }, [filters, onFiltersChange]);
 
-    const handleFavoritesToggle = useCallback(() => {
-        onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
-    }, [filters, onFiltersChange]);
+
 
     const handlePricePreset = useCallback((min: number, max: number) => {
         onFiltersChange({ ...filters, priceRange: { min, max } });
@@ -63,7 +59,6 @@ export default function MapFilterBar({
     const hasActiveFilters =
         filters.transactionType !== 'sale' ||
         filters.yearBuilt !== 'all' ||
-        filters.favoritesOnly ||
         filters.priceRange.min > 0 ||
         filters.priceRange.max < 500000;
 
@@ -111,7 +106,7 @@ export default function MapFilterBar({
                         const [min, max] = e.target.value.split('-').map(Number);
                         handlePricePreset(min, max);
                     }}
-                    className="sm:hidden px-2 py-1 text-[11px] font-medium rounded-lg bg-zinc-800 text-zinc-300 border-none outline-none cursor-pointer flex-shrink-0"
+                    className="sm:hidden h-8 px-2 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 outline-none flex-shrink-0"
                 >
                     {PRICE_PRESETS.map((preset) => (
                         <option key={preset.label} value={`${preset.min}-${preset.max}`}>
@@ -143,7 +138,7 @@ export default function MapFilterBar({
                     value={filters.yearBuilt}
                     onChange={(e) => handleYearBuiltChange(e.target.value as YearBuiltFilter)}
                     className={cn(
-                        "px-2 py-1 text-xs font-medium rounded-lg bg-zinc-800 border-none outline-none cursor-pointer flex-shrink-0",
+                        "h-8 px-2 text-xs font-medium rounded-lg bg-zinc-800 border border-zinc-700 outline-none flex-shrink-0",
                         filters.yearBuilt !== 'all' ? "text-primary" : "text-zinc-400"
                     )}
                 >
@@ -153,19 +148,7 @@ export default function MapFilterBar({
                     ))}
                 </select>
 
-                {/* 즐겨찾기 */}
-                <button
-                    onClick={handleFavoritesToggle}
-                    className={cn(
-                        "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg transition-all flex-shrink-0",
-                        filters.favoritesOnly
-                            ? "bg-yellow-500/20 text-yellow-400"
-                            : "bg-zinc-800 text-zinc-400 hover:text-white"
-                    )}
-                >
-                    <Star className={cn("w-3 h-3", filters.favoritesOnly && "fill-current")} />
-                    {favoritesCount > 0 && <span>{favoritesCount}</span>}
-                </button>
+
 
                 {/* 초기화 */}
                 {hasActiveFilters && (
