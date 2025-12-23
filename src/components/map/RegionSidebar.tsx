@@ -182,7 +182,7 @@ export default function RegionSidebar({
                                 <div className="space-y-2">
                                     {data.children.map((apt, idx) => (
                                         <div
-                                            key={apt.id || idx}
+                                            key={`${apt.id}-${idx}`}
                                             onClick={() => onApartmentClick?.(apt)}
                                             className="p-3 bg-accent/30 rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
                                         >

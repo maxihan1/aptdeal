@@ -361,6 +361,7 @@ export const kakaoMapStyles = `
 .apt-marker.selected {
   transform: scale(1.1);
   z-index: 100 !important;
+  animation: marker-pulse 2s ease-in-out infinite;
 }
 
 .apt-marker-content {
@@ -383,7 +384,19 @@ export const kakaoMapStyles = `
 }
 
 .apt-marker.selected .apt-marker-content {
-  box-shadow: 0 0 0 3px white, 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px #FF9500, 0 0 15px rgba(255, 149, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 2px solid #FFB800;
+}
+
+@keyframes marker-pulse {
+  0%, 100% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 0 rgba(255, 149, 0, 0.4);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(255, 149, 0, 0);
+  }
 }
 
 .apt-marker.rental .apt-marker-content {
