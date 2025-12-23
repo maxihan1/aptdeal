@@ -185,6 +185,15 @@
   border-top-color: #6b7280;
 }
 
+/* 전월세 모드 아파트 마커 색상 (청록색 계열) */
+.apt-marker.rent-mode .apt-marker-content {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.apt-marker.rent-mode .apt-marker-arrow {
+  border-top-color: #06b6d4;
+}
+
 .apt-marker-name {
   display: block;
   font-size: 8px;
@@ -304,4 +313,21 @@
   display: block;
   font-size: 9px;
   opacity: 0.85;
+}
+
+/* 전월세 모드 지역 마커 색상 (청록색 계열) */
+.region-marker.rent-mode .region-marker-content {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.region-sido.rent-mode .region-marker-content {
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+}
+
+.region-sigungu.rent-mode .region-marker-content {
+  background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+}
+
+.region-dong.rent-mode .region-marker-content {
+  background: linear-gradient(135deg, #06b6d4 0%, #67e8f9 100%);
 }

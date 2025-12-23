@@ -137,15 +137,15 @@ export default function RegionSidebar({
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/20 z-40 md:hidden"
+                    className="fixed inset-0 bg-black/20 z-10 md:hidden"
                     onClick={onClose}
                 />
             )}
 
-            {/* Sidebar - Glassmorphism style, positioned below header */}
+            {/* Sidebar - Glassmorphism style, positioned below filter bar */}
             <div
                 className={cn(
-                    "fixed left-0 top-12 sm:top-14 h-[calc(100dvh-48px)] sm:h-[calc(100dvh-56px)] z-40",
+                    "fixed left-0 top-[100px] h-[calc(100dvh-100px)] z-20",
                     "bg-zinc-900/85 backdrop-blur-xl border-r border-zinc-700/50 shadow-2xl",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",
@@ -211,8 +211,8 @@ export default function RegionSidebar({
                     </div>
                 )}
 
-                {/* Content - pb-safe for iOS safe area */}
-                <div className="h-[calc(100dvh-60px)] overflow-y-auto scrollbar-hide pb-[env(safe-area-inset-bottom)]">
+                {/* Content - height = viewport - top offset(100px) - header(~60px) */}
+                <div className="h-[calc(100dvh-160px)] overflow-y-auto scrollbar-hide pb-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />

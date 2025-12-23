@@ -22,6 +22,7 @@ interface RegionData extends RowDataPacket {
     avg_price_30d: number;
     avg_price_90d: number;
     avg_price_365d: number;
+    rent_avg_price: number;
     deal_count_30d: number;
     apartment_count: number;
 }
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
 
     const type = searchParams.get('type') as 'sido' | 'sigungu' | 'dong' | null;
     const parent = searchParams.get('parent');
+    const transactionType = searchParams.get('transactionType') as 'sale' | 'rent' | null;
     const swLat = searchParams.get('sw_lat');
     const swLng = searchParams.get('sw_lng');
     const neLat = searchParams.get('ne_lat');
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
                 avg_price_30d,
                 avg_price_90d,
                 avg_price_365d,
+                COALESCE(rent_avg_price, 0) as rent_avg_price,
                 deal_count_30d,
                 apartment_count
             FROM region_price_cache
@@ -84,18 +87,27 @@ export async function GET(request: NextRequest) {
         const [rows] = await pool.query<RegionData[]>(query, params);
 
         // 응답 데이터 변환
-        const regions = rows.map((row) => ({
-            id: `${row.region_type}-${row.region_name}`,
-            type: row.region_type,
-            code: row.region_code,
-            name: row.region_name,
-            parentName: row.parent_name,
-            lat: row.center_lat ? parseFloat(String(row.center_lat)) : 0,
-            lng: row.center_lng ? parseFloat(String(row.center_lng)) : 0,
-            avgPrice: row.avg_price_365d || row.avg_price_90d || row.avg_price_30d || 0,
-            dealCount: row.deal_count_30d || 0,
-            apartmentCount: row.apartment_count || 0,
-        }));
+        const regions = rows.map((row) => {
+            // transactionType에 따라 가격 선택
+            const salePrice = row.avg_price_365d || row.avg_price_90d || row.avg_price_30d || 0;
+            const rentPrice = row.rent_avg_price || 0;
+            const avgPrice = transactionType === 'rent' ? rentPrice : salePrice;
+
+            return {
+                id: `${row.region_type}-${row.region_name}`,
+                type: row.region_type,
+                code: row.region_code,
+                name: row.region_name,
+                parentName: row.parent_name,
+                lat: row.center_lat ? parseFloat(String(row.center_lat)) : 0,
+                lng: row.center_lng ? parseFloat(String(row.center_lng)) : 0,
+                avgPrice,
+                rentPrice,
+                salePrice,
+                dealCount: row.deal_count_30d || 0,
+                apartmentCount: row.apartment_count || 0,
+            };
+        });
 
         return NextResponse.json(regions);
 

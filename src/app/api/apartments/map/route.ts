@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
                     pc.last_deal_price,
                     0
                 ) as avgPrice,
+                COALESCE(pc.rent_avg_price, 0) as rentPrice,
                 CASE 
                     WHEN pc.avg_price_30d > 0 THEN 30
                     WHEN pc.avg_price_90d > 0 THEN 90
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
                 END as pricePeriod,
                 pc.deal_count_30d as recentDeals,
                 pc.last_deal_date as lastDealDate,
-                COALESCE(pc.is_rental, FALSE) as isRental
+                CASE WHEN COALESCE(pc.rent_avg_price, 0) > 0 THEN TRUE ELSE FALSE END as hasRentPrice,
+                CAST(LEFT(ab.kaptUsedate, 4) AS UNSIGNED) as buildYear
             FROM apt_basic_info ab
             LEFT JOIN apt_price_cache pc ON ab.kaptCode COLLATE utf8mb4_unicode_ci = pc.kapt_code COLLATE utf8mb4_unicode_ci
             LEFT JOIN apt_search_index si ON ab.kaptCode COLLATE utf8mb4_unicode_ci = si.kapt_code COLLATE utf8mb4_unicode_ci
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
                   COALESCE(pc.avg_price_90d, 0) > 0 OR
                   COALESCE(pc.avg_price_365d, 0) > 0 OR
                   COALESCE(pc.last_deal_price, 0) > 0 OR
-                  COALESCE(pc.is_rental, FALSE) = TRUE
+                  COALESCE(pc.rent_avg_price, 0) > 0
               )
         `;
 
@@ -132,12 +134,14 @@ export async function GET(request: NextRequest) {
                 lat: row.lat ? parseFloat(String(row.lat)) : 0,
                 lng: row.lng ? parseFloat(String(row.lng)) : 0,
                 avgPrice: row.avgPrice ? Math.round(Number(row.avgPrice)) : 0,
+                rentPrice: (row as any).rentPrice ? Math.round(Number((row as any).rentPrice)) : 0,
+                hasRentPrice: (row as any).hasRentPrice === 1 || (row as any).hasRentPrice === true,
                 pricePeriod: row.pricePeriod || null, // 30, 90, 365 (일)
                 householdCount: row.householdCount || 0,
+                buildYear: (row as any).buildYear || null,
                 priceChange: undefined,
                 gu,
                 dong: dongName,
-                isRental: (row as any).isRental === 1 || (row as any).isRental === true,
             };
         });
 

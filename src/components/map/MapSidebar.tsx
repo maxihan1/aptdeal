@@ -27,6 +27,7 @@ interface ApartmentBasic {
     sido?: string;
     avgPrice?: number;
     householdCount?: number;
+    isRental?: boolean;
 }
 
 interface RegionNavigation {
@@ -41,6 +42,7 @@ interface MapSidebarProps {
     isOpen: boolean;
     onClose: () => void;
     onNavigateToRegion?: (region: RegionNavigation) => void;
+    transactionType?: 'sale' | 'rent';
     className?: string;
 }
 
@@ -49,13 +51,19 @@ export default function MapSidebar({
     isOpen,
     onClose,
     onNavigateToRegion,
+    transactionType = 'sale',
     className
 }: MapSidebarProps) {
     const [data, setData] = useState<SidebarData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<TabType>('sales');
+    const [activeTab, setActiveTab] = useState<TabType>(transactionType === 'rent' ? 'rent' : 'sales');
     const prevApartmentId = useRef<string | null>(null);
+
+    // transactionType 필터 변경 시 탭 동기화
+    useEffect(() => {
+        setActiveTab(transactionType === 'rent' ? 'rent' : 'sales');
+    }, [transactionType]);
 
     // 아파트 선택 시 상세 정보 로드
     useEffect(() => {
@@ -158,15 +166,15 @@ export default function MapSidebar({
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/20 z-40 md:hidden"
+                    className="fixed inset-0 bg-black/20 z-10 md:hidden"
                     onClick={onClose}
                 />
             )}
 
-            {/* Sidebar - Glassmorphism style, positioned below header */}
+            {/* Sidebar - Glassmorphism style, positioned below filter bar */}
             <div
                 className={cn(
-                    "fixed left-0 top-12 sm:top-14 h-[calc(100dvh-48px)] sm:h-[calc(100dvh-56px)] z-40",
+                    "fixed left-0 top-[100px] h-[calc(100dvh-100px)] z-20",
                     "bg-zinc-900/85 backdrop-blur-xl border-r border-zinc-700/50 shadow-2xl",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",
@@ -185,8 +193,8 @@ export default function MapSidebar({
                     </button>
                 </div>
 
-                {/* Content - pb-safe for iOS safe area */}
-                <div className="h-[calc(100dvh-48px)] overflow-y-auto scrollbar-hide pb-[env(safe-area-inset-bottom)]">
+                {/* Content - height = viewport - top offset(100px) - header(~48px) */}
+                <div className="h-[calc(100dvh-148px)] overflow-y-auto scrollbar-hide pb-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />

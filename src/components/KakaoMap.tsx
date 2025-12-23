@@ -12,7 +12,8 @@ export interface ApartmentMarker {
     address: string;
     lat: number;
     lng: number;
-    avgPrice: number; // 만원 단위
+    avgPrice: number; // 만원 단위 (매매)
+    rentPrice?: number; // 만원 단위 (전월세)
     priceChange?: number; // 전월 대비 변동률 (%)
     householdCount?: number;
     dong?: string;
@@ -28,6 +29,8 @@ export interface RegionMarker {
     lat: number;
     lng: number;
     avgPrice: number;
+    rentPrice?: number;
+    salePrice?: number;
     dealCount: number;
     apartmentCount: number;
 }
@@ -36,6 +39,7 @@ interface KakaoMapProps {
     apartments: ApartmentMarker[];
     regions?: RegionMarker[];
     dataType?: 'sido' | 'sigungu' | 'dong' | 'apartment';
+    transactionType?: 'sale' | 'rent';
     className?: string;
     initialCenter?: { lat: number; lng: number };
     initialLevel?: number;
@@ -63,6 +67,7 @@ export default function KakaoMap({
     apartments,
     regions = [],
     dataType = 'apartment',
+    transactionType = 'sale',
     className,
     initialCenter = { lat: 37.5665, lng: 126.9780 }, // 서울 중심
     initialLevel = 7,
@@ -184,11 +189,19 @@ export default function KakaoMap({
                 if (!region.lat || !region.lng) return;
 
                 const content = document.createElement('div');
-                content.className = `region-marker region-${region.type}`;
+                const rentModeClass = transactionType === 'rent' ? ' rent-mode' : '';
+                content.className = `region-marker region-${region.type}${rentModeClass}`;
+
+                // 거래 타입에 따라 가격 선택
+                const displayPrice = transactionType === 'rent'
+                    ? (region.rentPrice || region.avgPrice || 0)
+                    : (region.salePrice || region.avgPrice || 0);
+                const priceLabel = transactionType === 'rent' ? '전세' : '';
+
                 content.innerHTML = `
                     <div class="region-marker-content">
                         <span class="region-marker-name">${region.name}</span>
-                        <span class="region-marker-price">${formatPrice(region.avgPrice)}</span>
+                        <span class="region-marker-price">${priceLabel}${formatPrice(displayPrice)}</span>
                         <span class="region-marker-count">${region.apartmentCount}개 단지</span>
                     </div>
                 `;
@@ -232,14 +245,19 @@ export default function KakaoMap({
 
             const isSelected = apt.id === selectedApartmentId;
             const priceClass = apt.priceChange && apt.priceChange > 0 ? 'up' : apt.priceChange && apt.priceChange < 0 ? 'down' : '';
-            const rentalClass = (apt as any).isRental ? 'rental' : '';
+            const isRentMode = transactionType === 'rent';
+            const rentModeClass = isRentMode ? 'rent-mode' : '';
+
+            // 전월세 모드일 때 전세 가격 표시, 없으면 매매 가격 표시
+            const displayPrice = isRentMode && apt.rentPrice ? apt.rentPrice : apt.avgPrice;
+            const priceLabel = isRentMode && apt.rentPrice ? '전세' : '';
 
             const content = document.createElement('div');
-            content.className = `apt-marker ${priceClass} ${rentalClass} ${isSelected ? 'selected' : ''}`.trim();
+            content.className = `apt-marker ${priceClass} ${rentModeClass} ${isSelected ? 'selected' : ''}`.trim();
             content.innerHTML = `
         <div class="apt-marker-content">
           <span class="apt-marker-name">${apt.name}</span>
-          <span class="apt-marker-price">${(apt as any).isRental ? '임대' : formatPrice(apt.avgPrice)}</span>
+          <span class="apt-marker-price">${priceLabel}${formatPrice(displayPrice)}</span>
         </div>
         <div class="apt-marker-arrow"></div>
       `;
@@ -270,7 +288,7 @@ export default function KakaoMap({
 
             overlaysRef.current.push(overlay);
         });
-    }, [apartments, regions, dataType, isMapReady, selectedApartmentId, handleApartmentClick, onRegionClick]);
+    }, [apartments, regions, dataType, transactionType, isMapReady, selectedApartmentId, handleApartmentClick, onRegionClick]);
 
     // 지도 중심 이동
     const moveToCenter = useCallback((lat: number, lng: number, level?: number) => {

@@ -558,10 +558,20 @@ async function refreshMapCaches() {
         const { refreshPriceCache } = await import('./create_price_cache.js');
         await refreshPriceCache();
 
+        // 0.5. 전월세 캐시 추가
+        log('🏠 전월세 캐시 추가 중...');
+        const { addRentToCache } = await import('./add_rent_to_price_cache.js');
+        await addRentToCache();
+
         // 1. 지역 가격 캐시 갱신
         log('📊 지역 가격 캐시 갱신 중...');
         const { refreshRegionCache } = await import('./create_region_cache.js');
         await refreshRegionCache();
+
+        // 1.5. 지역 전세 가격 캐시 추가
+        log('🏠 지역 전세 가격 캐시 추가 중...');
+        const { addRentToRegionCache } = await import('./add_rent_to_region_cache.js');
+        await addRentToRegionCache();
 
         // 2. 사이드바 캐시 갱신
         log('📋 사이드바 캐시 갱신 중...');

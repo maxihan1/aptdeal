@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import KakaoMap, { ApartmentMarker, RegionMarker } from '../KakaoMap';
 import MapSidebar from './MapSidebar';
 import RegionSidebar from './RegionSidebar';
+import { MapFilterBar, MapFilters, DEFAULT_FILTERS } from './filter';
+import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 import { Search, Loader2, X } from 'lucide-react';
 
@@ -83,6 +85,46 @@ export default function MapContainer({
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
+
+    // 필터 상태
+    const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
+
+    // 즐겨찾기
+    const { favorites, count: favoritesCount, isFavorite, toggleFavorite } = useFavorites();
+
+    // 필터링된 아파트 목록
+    const filteredApartments = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+
+        return apartments.filter(apt => {
+            const hasSalePrice = (apt.avgPrice || 0) > 0;
+            const hasRentPrice = (apt as any).hasRentPrice === true || (apt as any).rentPrice > 0;
+
+            // 거래 타입 필터
+            if (filters.transactionType === 'sale' && !hasSalePrice) return false;
+            if (filters.transactionType === 'rent' && !hasRentPrice) return false;
+
+            // 가격 필터 (거래 타입에 따라 다른 가격 사용)
+            const price = filters.transactionType === 'rent'
+                ? ((apt as any).rentPrice || 0)
+                : (apt.avgPrice || 0);
+            if (price > 0) {
+                if (price < filters.priceRange.min) return false;
+                if (price > filters.priceRange.max) return false;
+            }
+
+            // 연식 필터 (buildYear가 있는 경우만)
+            if (filters.yearBuilt !== 'all' && (apt as any).buildYear) {
+                const age = currentYear - parseInt((apt as any).buildYear);
+                if (age > parseInt(filters.yearBuilt)) return false;
+            }
+
+            // 즐겨찾기 필터
+            if (filters.favoritesOnly && !isFavorite(apt.id)) return false;
+
+            return true;
+        });
+    }, [apartments, filters, isFavorite]);
 
     // 헤더 지역 표시 업데이트 (지역/아파트 선택 시)
     useEffect(() => {
@@ -381,8 +423,21 @@ export default function MapContainer({
             className={cn("relative w-full h-full", className)}
             style={{ touchAction: 'manipulation' }}
         >
+            {/* 필터바 - 최상단 */}
+            <div className="absolute top-0 left-0 right-0 z-30">
+                <MapFilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    favoritesCount={favoritesCount}
+                />
+            </div>
+
             {/* 플로팅 검색바 - HUD 스타일 */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-[85%] sm:w-[90%] max-w-md">
+            {/* 모바일에서 사이드바가 열리면 숨김 */}
+            <div className={cn(
+                "absolute left-1/2 -translate-x-1/2 z-25 w-[85%] sm:w-[90%] max-w-md top-14",
+                isMobile && (isApartmentSidebarOpen || isRegionSidebarOpen) && "hidden"
+            )}>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                     <input
@@ -436,15 +491,18 @@ export default function MapContainer({
                 apartment={selectedApartment ? {
                     id: selectedApartment.id,
                     name: selectedApartment.name,
+                    displayName: (selectedApartment as any).displayName,
                     address: selectedApartment.address,
                     dong: selectedApartment.dong,
                     gu: selectedApartment.gu,
                     avgPrice: selectedApartment.avgPrice,
                     householdCount: selectedApartment.householdCount,
+                    isRental: (selectedApartment as any).isRental,
                 } : null}
                 isOpen={isApartmentSidebarOpen}
                 onClose={handleApartmentSidebarClose}
                 onNavigateToRegion={handleNavigateToRegion}
+                transactionType={filters.transactionType}
             />
 
             <RegionSidebar
@@ -460,9 +518,10 @@ export default function MapContainer({
 
             {/* 지도 */}
             <KakaoMap
-                apartments={apartments}
+                apartments={filteredApartments}
                 regions={regions}
                 dataType={dataType}
+                transactionType={filters.transactionType}
                 className="w-full h-full"
                 center={mapCenter}
                 level={mapLevel}
