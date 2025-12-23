@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     try {
         // 좌표가 있는 아파트 조회 + 캐시된 가격 정보 + displayName
         let query = `
-            SELECT 
+            SELECT DISTINCT
                 ab.kaptCode as id,
                 COALESCE(si.displayName, ab.kaptName) as name,
                 ab.kaptName as kaptName,

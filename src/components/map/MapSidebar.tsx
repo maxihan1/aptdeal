@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MapPin, Loader2, ExternalLink, Home, Key } from 'lucide-react';
+import { ArrowLeft, MapPin, Loader2, ExternalLink, Home, Key, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     BasicInfoSection,
@@ -24,14 +24,23 @@ interface ApartmentBasic {
     address: string;
     dong?: string;
     gu?: string;
+    sido?: string;
     avgPrice?: number;
     householdCount?: number;
+}
+
+interface RegionNavigation {
+    type: 'sido' | 'sigungu' | 'dong';
+    name: string;
+    lat?: number;
+    lng?: number;
 }
 
 interface MapSidebarProps {
     apartment: ApartmentBasic | null;
     isOpen: boolean;
     onClose: () => void;
+    onNavigateToRegion?: (region: RegionNavigation) => void;
     className?: string;
 }
 
@@ -39,6 +48,7 @@ export default function MapSidebar({
     apartment,
     isOpen,
     onClose,
+    onNavigateToRegion,
     className
 }: MapSidebarProps) {
     const [data, setData] = useState<SidebarData | null>(null);
@@ -187,13 +197,58 @@ export default function MapSidebar({
                         </div>
                     ) : data ? (
                         <div className="p-3 space-y-4">
-                            {/* 기본 정보 (이름, 주소) */}
-                            <div>
-                                <h3 className="font-bold text-lg mb-1">{apartment?.displayName || data.basic.name}</h3>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <MapPin className="w-3 h-3 flex-shrink-0" />
-                                    <span className="truncate">{data.basic.address}</span>
+                            {/* 브레드크럼 네비게이션 */}
+                            {data.basic.address && (
+                                <div className="flex items-center gap-1 text-xs flex-wrap">
+                                    <MapPin className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
+                                    {(() => {
+                                        // 주소에서 시도, 시군구, 읍면동 파싱
+                                        const parts = data.basic.address.split(' ');
+                                        const sido = parts[0]; // 서울특별시
+                                        const sigungu = parts[1]; // 양천구
+                                        const dong = parts[2]; // 목동
+
+                                        return (
+                                            <>
+                                                {sido && (
+                                                    <button
+                                                        onClick={() => onNavigateToRegion?.({ type: 'sido', name: sido })}
+                                                        className="text-primary hover:underline cursor-pointer"
+                                                    >
+                                                        {sido}
+                                                    </button>
+                                                )}
+                                                {sigungu && (
+                                                    <>
+                                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                                        <button
+                                                            onClick={() => onNavigateToRegion?.({ type: 'sigungu', name: sigungu })}
+                                                            className="text-primary hover:underline cursor-pointer"
+                                                        >
+                                                            {sigungu}
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {dong && (
+                                                    <>
+                                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                                        <button
+                                                            onClick={() => onNavigateToRegion?.({ type: 'dong', name: dong })}
+                                                            className="text-primary hover:underline cursor-pointer"
+                                                        >
+                                                            {dong}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
+                            )}
+
+                            {/* 단지 이름 */}
+                            <div>
+                                <h3 className="font-bold text-lg">{apartment?.displayName || data.basic.name}</h3>
                             </div>
 
                             {/* 기본 정보 섹션 */}

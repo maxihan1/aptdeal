@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Loader2, Key } from 'lucide-react';
+import { ArrowLeft, MapPin, Loader2, Key, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RegionChild {
@@ -31,6 +31,11 @@ interface RegionData {
     totalApartments?: number;
 }
 
+interface RegionNavigation {
+    type: 'sido' | 'sigungu' | 'dong';
+    name: string;
+}
+
 interface RegionSidebarProps {
     regionType: 'sido' | 'sigungu' | 'dong';
     regionName: string;
@@ -39,6 +44,7 @@ interface RegionSidebarProps {
     onClose: () => void;
     onRegionClick?: (child: RegionChild, type: string) => void;
     onApartmentClick?: (apartment: RegionChild) => void;
+    onNavigateToRegion?: (region: RegionNavigation) => void;
     bounds?: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
     className?: string;
 }
@@ -63,6 +69,7 @@ export default function RegionSidebar({
     onClose,
     onRegionClick,
     onApartmentClick,
+    onNavigateToRegion,
     bounds,
     className
 }: RegionSidebarProps) {
@@ -164,6 +171,45 @@ export default function RegionSidebar({
                         <ArrowLeft className="w-4 h-4" />
                     </button>
                 </div>
+
+                {/* 브레드크럼 네비게이션 */}
+                {(regionType === 'sigungu' || regionType === 'dong') && parentName && (
+                    <div className="flex items-center gap-1 text-xs p-3 pb-0 flex-wrap">
+                        <MapPin className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
+                        {(() => {
+                            // parentName에서 시도, 시군구 파싱
+                            const parts = parentName.split(' ');
+                            const sido = parts[0];
+                            const sigungu = parts[1];
+
+                            return (
+                                <>
+                                    {sido && (
+                                        <button
+                                            onClick={() => onNavigateToRegion?.({ type: 'sido', name: sido })}
+                                            className="text-primary hover:underline cursor-pointer"
+                                        >
+                                            {sido}
+                                        </button>
+                                    )}
+                                    {regionType === 'dong' && sigungu && (
+                                        <>
+                                            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                            <button
+                                                onClick={() => onNavigateToRegion?.({ type: 'sigungu', name: sigungu })}
+                                                className="text-primary hover:underline cursor-pointer"
+                                            >
+                                                {sigungu}
+                                            </button>
+                                        </>
+                                    )}
+                                    <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-foreground font-medium">{regionName}</span>
+                                </>
+                            );
+                        })()}
+                    </div>
+                )}
 
                 {/* Content - pb-safe for iOS safe area */}
                 <div className="h-[calc(100dvh-60px)] overflow-y-auto scrollbar-hide pb-[env(safe-area-inset-bottom)]">

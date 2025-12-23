@@ -234,6 +234,13 @@ export default function MapContainer({
         setIsApartmentSidebarOpen(true);
         setIsRegionSidebarOpen(false);
         onApartmentSelect?.(apartment);
+
+        // 선택된 아파트를 중앙으로 이동하고 한 단계 확대
+        if (apartment.lat && apartment.lng) {
+            setMapCenter({ lat: apartment.lat, lng: apartment.lng });
+            // 현재 레벨에서 한 단계 확대 (최소 레벨 2)
+            setMapLevel(prev => Math.max(2, (prev || 4) - 1));
+        }
     }, [onApartmentSelect, isMobile]);
 
     // 지역 클릭 핸들러
@@ -267,6 +274,59 @@ export default function MapContainer({
             onRegionSelect?.(null);
         }, 300);
     }, [onRegionSelect]);
+
+    // 브레드크럼 네비게이션: 상위 지역으로 이동
+    const handleNavigateToRegion = useCallback(async (region: { type: 'sido' | 'sigungu' | 'dong'; name: string }) => {
+        try {
+            // 부모 지역 정보 추출
+            let parentForQuery = '';
+            if (region.type !== 'sido') {
+                // 아파트 주소에서 추출 또는 현재 지역의 parentName에서 추출
+                const addressParts = selectedApartment?.address?.split(' ') || [];
+                const regionParentParts = selectedRegion?.parentName?.split(' ') || [];
+
+                if (region.type === 'sigungu') {
+                    parentForQuery = addressParts[0] || regionParentParts[0] || '';
+                } else if (region.type === 'dong') {
+                    parentForQuery = addressParts.slice(0, 2).join(' ') || regionParentParts.slice(0, 2).join(' ') || '';
+                }
+            }
+
+            const url = `/api/map/regions?type=${region.type}${parentForQuery ? `&parent=${encodeURIComponent(parentForQuery)}` : ''}`;
+            const response = await fetch(url);
+
+            if (response.ok) {
+                const regions = await response.json();
+                const targetRegion = regions.find((r: any) => r.name === region.name);
+
+                if (targetRegion) {
+                    // 사이드바 전환
+                    setIsApartmentSidebarOpen(false);
+                    setSelectedApartment(null);
+
+                    // 지역 선택 및 사이드바 열기
+                    const regionMarker = {
+                        type: region.type,
+                        name: region.name,
+                        parentName: targetRegion.parentName,
+                        lat: targetRegion.lat,
+                        lng: targetRegion.lng,
+                    };
+                    setSelectedRegion(regionMarker as any);
+                    setIsRegionSidebarOpen(true);
+
+                    // 지도 이동
+                    const zoomLevels = { sido: 9, sigungu: 6, dong: 4 };
+                    if (targetRegion.lat && targetRegion.lng) {
+                        setMapCenter({ lat: targetRegion.lat, lng: targetRegion.lng });
+                        setMapLevel(zoomLevels[region.type]);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Navigation error:', error);
+        }
+    }, [selectedApartment, selectedRegion]);
 
     // 하위 지역 클릭
     const handleChildRegionClick = useCallback((child: { lat?: number; lng?: number; name: string }, childType: string) => {
@@ -384,6 +444,7 @@ export default function MapContainer({
                 } : null}
                 isOpen={isApartmentSidebarOpen}
                 onClose={handleApartmentSidebarClose}
+                onNavigateToRegion={handleNavigateToRegion}
             />
 
             <RegionSidebar
@@ -394,6 +455,7 @@ export default function MapContainer({
                 onClose={handleRegionSidebarClose}
                 onRegionClick={handleChildRegionClick}
                 onApartmentClick={handleChildApartmentClick}
+                onNavigateToRegion={handleNavigateToRegion}
             />
 
             {/* 지도 */}
