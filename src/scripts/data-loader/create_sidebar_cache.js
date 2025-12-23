@@ -234,33 +234,37 @@ async function updateRecentRents() {
     const rentData = await executeQuery(`
         SELECT 
             kapt_code,
-        JSON_ARRAYAGG(
-            JSON_OBJECT(
-                'deposit', deposit,
-                'monthlyRent', monthlyRent,
-                'area', area,
-                'floor', floor,
-                'date', date,
-                'type', type
-            )
-        ) as recent_rents
-        FROM(
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'deposit', deposit,
+                    'monthlyRent', monthlyRent,
+                    'area', area,
+                    'floor', floor,
+                    'date', date,
+                    'type', type
+                )
+            ) as recent_rents
+        FROM (
             SELECT 
-                anm.kapt_code,
-            r.deposit,
-            r.monthlyRent,
-            r.excluUseAr as area,
-            r.floor,
-            CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0'), '-', LPAD(r.dealDay, 2, '0')) as date,
-            IF(r.monthlyRent > 0, '월세', '전세') as type,
-            ROW_NUMBER() OVER(PARTITION BY anm.kapt_code ORDER BY r.dealYear DESC, r.dealMonth DESC, r.dealDay DESC) as rn
-            FROM apt_name_mapping anm
-            INNER JOIN apt_rent_info r ON r.aptNm COLLATE utf8mb4_unicode_ci = anm.deal_apt_name COLLATE utf8mb4_unicode_ci
-            WHERE CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0')) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), '%Y-%m')
-        ) sub
+                kapt_code, deposit, monthlyRent, area, floor, date, type,
+                ROW_NUMBER() OVER (PARTITION BY kapt_code ORDER BY date DESC) as rn
+            FROM (
+                SELECT DISTINCT
+                    anm.kapt_code,
+                    r.deposit,
+                    r.monthlyRent,
+                    r.excluUseAr as area,
+                    r.floor,
+                    CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0'), '-', LPAD(r.dealDay, 2, '0')) as date,
+                    IF(r.monthlyRent > 0, '월세', '전세') as type
+                FROM apt_name_mapping anm
+                INNER JOIN apt_rent_info r ON r.aptNm COLLATE utf8mb4_unicode_ci = anm.deal_apt_name COLLATE utf8mb4_unicode_ci
+                WHERE CONCAT(r.dealYear, '-', LPAD(r.dealMonth, 2, '0')) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), '%Y-%m')
+            ) dedup
+        ) ranked
         WHERE rn <= 5
         GROUP BY kapt_code
-        `);
+    `);
 
     console.log(`  - ${rentData.length}개 단지 전월세 데이터 조회 완료`);
 
@@ -296,17 +300,21 @@ async function updateRecentDeals() {
             ) as recent_deals
         FROM (
             SELECT 
-                anm.kapt_code,
-                d.dealAmount as price,
-                ROUND(d.excluUseAr) as area,
-                d.floor,
-                DATE_FORMAT(d.dealDate, '%Y-%m-%d') as date,
-                ROW_NUMBER() OVER (PARTITION BY anm.kapt_code ORDER BY d.dealDate DESC) as rn
-            FROM apt_name_mapping anm
-            INNER JOIN apt_deal_info d ON d.aptNm = anm.deal_apt_name
-            WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-              AND (d.cdealType IS NULL OR d.cdealType = '')
-        ) sub
+                kapt_code, price, area, floor, date,
+                ROW_NUMBER() OVER (PARTITION BY kapt_code ORDER BY date DESC) as rn
+            FROM (
+                SELECT DISTINCT
+                    anm.kapt_code,
+                    d.dealAmount as price,
+                    ROUND(d.excluUseAr) as area,
+                    d.floor,
+                    DATE_FORMAT(d.dealDate, '%Y-%m-%d') as date
+                FROM apt_name_mapping anm
+                INNER JOIN apt_deal_info d ON d.aptNm = anm.deal_apt_name
+                WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                  AND (d.cdealType IS NULL OR d.cdealType = '')
+            ) dedup
+        ) ranked
         WHERE rn <= 5
         GROUP BY kapt_code
     `);

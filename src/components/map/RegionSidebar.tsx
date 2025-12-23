@@ -135,10 +135,10 @@ export default function RegionSidebar({
                 />
             )}
 
-            {/* Sidebar - Glassmorphism style */}
+            {/* Sidebar - Glassmorphism style, positioned below header */}
             <div
                 className={cn(
-                    "fixed left-0 top-0 h-[100dvh] z-50",
+                    "fixed left-0 top-12 sm:top-14 h-[calc(100dvh-48px)] sm:h-[calc(100dvh-56px)] z-40",
                     "bg-zinc-900/85 backdrop-blur-xl border-r border-zinc-700/50 shadow-2xl",
                     "w-[90%] sm:w-[340px] md:w-[380px]",
                     "transform transition-transform duration-300 ease-in-out",

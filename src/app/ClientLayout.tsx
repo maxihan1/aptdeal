@@ -140,9 +140,9 @@ function ClientLayoutContent({
             </span>
           </div>
 
-          {/* 가운데: 현재 지역 (지도에서 전달받을 예정) */}
+          {/* 가운데: 현재 지역 */}
           <div className="flex-1 text-center px-2">
-            <span className="text-xs sm:text-sm text-zinc-400 truncate block" id="map-current-region">
+            <span className="text-sm sm:text-base font-semibold text-white truncate block" id="map-current-region">
               전국 아파트 지도
             </span>
           </div>

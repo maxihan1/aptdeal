@@ -63,13 +63,12 @@ export async function GET(request: Request) {
     // Common join clause for region filtering
     const regionJoin = `
       JOIN (
-          SELECT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, 
-                 MAX(as1) as as1, MAX(as2) as as2 
+          SELECT DISTINCT LEFT(bjdCode, 5) COLLATE utf8mb4_unicode_ci as sggCode, 
+                 as1, as2
           FROM apt_list
           WHERE 1=1
           ${sido ? 'AND as1 = ?' : ''}
           ${sigungu ? 'AND as2 = ?' : ''}
-          GROUP BY LEFT(bjdCode, 5)
       ) l ON d.sggCd = l.sggCode
     `;
 
@@ -181,7 +180,7 @@ export async function GET(request: Request) {
       FROM apt_deal_info d
       ${regionJoin}
       WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      GROUP BY d.aptNm, region, l.as1, l.as2, d.umdNm
+      GROUP BY d.aptNm, l.as1, l.as2, d.umdNm
       ORDER BY count DESC 
       LIMIT 5
     `;
@@ -248,6 +247,8 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error("Dashboard Stats Error:", error);
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+    console.error("Error details:", (error as Error).message);
+    console.error("Error stack:", (error as Error).stack);
+    return NextResponse.json({ error: "Failed to fetch stats", details: (error as Error).message }, { status: 500 });
   }
 }
