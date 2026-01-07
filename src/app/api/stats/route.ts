@@ -47,6 +47,21 @@ export async function GET(request: Request) {
             ? JSON.parse(firstRow.stat_value)
             : firstRow.stat_value;
           console.log(`[Cache] HIT for ${regionCode}`);
+
+          // 캐시된 trend 데이터 날짜 정렬 (MM-DD 형식에서 연도 경계 고려)
+          if (cachedData.trend && Array.isArray(cachedData.trend)) {
+            cachedData.trend.sort((a: { date: string }, b: { date: string }) => {
+              const [aMonth, aDay] = a.date.split('-').map(Number);
+              const [bMonth, bDay] = b.date.split('-').map(Number);
+              // 12월은 이전 연도, 1월은 현재 연도로 간주
+              const aYear = aMonth >= 11 ? 0 : 1; // 11월, 12월은 이전 연도
+              const bYear = bMonth >= 11 ? 0 : 1;
+              if (aYear !== bYear) return aYear - bYear;
+              if (aMonth !== bMonth) return aMonth - bMonth;
+              return aDay - bDay;
+            });
+          }
+
           // 캐시된 데이터 그대로 반환 (trend, popularComplexes 포함)
           return NextResponse.json({
             ...cachedData,
@@ -164,8 +179,8 @@ export async function GET(request: Request) {
     }
 
     trendQuery += `
-      GROUP BY date
-      ORDER BY date ASC
+      GROUP BY d.dealDate
+      ORDER BY d.dealDate ASC
     `;
 
     // 6. Popular Complexes (Most Traded in Last 30 Days)

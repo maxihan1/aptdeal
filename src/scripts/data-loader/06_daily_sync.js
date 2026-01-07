@@ -560,8 +560,8 @@ async function refreshMapCaches() {
 
         // 0.5. 전월세 캐시 추가
         log('🏠 전월세 캐시 추가 중...');
-        const { addRentToCache } = await import('./add_rent_to_price_cache.js');
-        await addRentToCache();
+        const { addRentPriceColumns } = await import('./add_rent_to_price_cache.js');
+        await addRentPriceColumns();
 
         // 1. 지역 가격 캐시 갱신
         log('📊 지역 가격 캐시 갱신 중...');
