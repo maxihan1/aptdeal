@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { executeQuery } from './src/lib/mysql.js';
+import { initScheduler, getSyncStatus } from './src/lib/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,6 +176,11 @@ app.prepare().then(() => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV
     });
+  });
+
+  // 동기화 스케줄러 상태 확인 API
+  server.get('/api/sync/status', (req, res) => {
+    res.status(200).json(getSyncStatus());
   });
 
   // [성능 최적화] 아래 Express 지역 라우트들은 비활성화됨
@@ -483,6 +489,12 @@ app.prepare().then(() => {
     console.log(`🔗 [SERVER] API available at http://0.0.0.0:${port}/api`);
     console.log(`💓 [SERVER] Health check at http://0.0.0.0:${port}/health`);
     console.log('✨ [SERVER] Ready to receive requests!');
+
+    // 🕐 서버 내장 스케줄러 시작
+    initScheduler({
+      runOnStartup: true,    // 배포 직후 즉시 1회 실행
+      startupDelay: 15000,   // 서버 완전 구동 후 15초 대기 후 실행
+    });
   });
 }).catch(error => {
   console.error('❌ [NEXT] Failed to prepare Next.js app:', error);
