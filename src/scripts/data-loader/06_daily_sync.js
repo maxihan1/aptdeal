@@ -115,96 +115,151 @@ async function verifyAndRecoverRegionMonth(regionName, regionCode, year, month, 
 }
 
 /**
- * 데이터 삽입 (UPSERT)
+ * 데이터 삽입 (배치 UPSERT)
+ * - multi-row INSERT로 트랜잭션 수 최소화 (Lock timeout 방지)
+ * - 배치 간 딜레이로 DB 부하 분산
  */
 async function insertData(items, type, regionCode, year, month) {
     if (!items || items.length === 0) return 0;
 
-    const tableName = type === 'deal' ? 'apt_deal_info' : 'apt_rent_info';
     let insertedCount = 0;
-
-    // 배치 크기
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = 50; // multi-row INSERT 단위
+    const BATCH_DELAY_MS = 100; // 배치 간 딜레이 (DB 부하 분산)
 
     for (let i = 0; i < items.length; i += BATCH_SIZE) {
         const batch = items.slice(i, i + BATCH_SIZE);
 
-        for (const item of batch) {
-            try {
-                if (type === 'deal') {
-                    // 매매 데이터 삽입 (현재 스키마에 맞게 간소화)
-                    await executeQuery(`
-            INSERT INTO apt_deal_info 
-            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
-             buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
-             jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-              dealAmount = VALUES(dealAmount),
-              cdealType = VALUES(cdealType),
-              cdealDay = VALUES(cdealDay)
-          `, [
-                        regionCode,
-                        item.aptNm || '',
-                        parseFloat(item.excluUseAr) || 0,
-                        parseInt(item.floor) || 0,
-                        year,
-                        month,
-                        parseInt(item.dealDay) || 0,
-                        parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
-                        parseInt(item.buildYear) || 0,
-                        item.aptDong || '',
-                        item.buyerGbn || '',
-                        item.cdealDay || '',
-                        item.cdealType || '',
-                        item.dealingGbn || '',
-                        item.estateAgentSggNm || '',
-                        item.jibun || '',
-                        item.landLeaseholdGbn || '',
-                        item.rgstDate || '',
-                        item.slerGbn || '',
-                        item.umdNm || ''
-                    ]);
-                } else {
-                    // 전월세 데이터 삽입 (현재 스키마에 맞게 간소화)
-                    await executeQuery(`
-            INSERT INTO apt_rent_info 
-            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
-             monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
-             jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-              monthlyRent = VALUES(monthlyRent),
-              deposit = VALUES(deposit),
-              contractType = VALUES(contractType)
-          `, [
-                        regionCode,
-                        item.aptNm || '',
-                        parseFloat(item.excluUseAr) || 0,
-                        parseInt(item.floor) || 0,
-                        year,
-                        month,
-                        parseInt(item.dealDay) || 0,
-                        parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
-                        parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
-                        parseInt(item.buildYear) || 0,
-                        item.aptDong || '',
-                        item.contractType || '',
-                        item.contractTerm || '',
-                        item.jibun || '',
-                        parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
-                        parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
-                        item.useRRRight || '',
-                        item.umdNm || ''
-                    ]);
-                }
-                insertedCount++;
-            } catch (err) {
-                // 중복 키 에러는 무시 (이미 존재하는 데이터)
-                if (!err.message.includes('Duplicate')) {
-                    logError(`삽입 오류: ${err.message}`);
+        try {
+            if (type === 'deal') {
+                const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',\n');
+                const values = batch.flatMap(item => [
+                    regionCode,
+                    item.aptNm || '',
+                    parseFloat(item.excluUseAr) || 0,
+                    parseInt(item.floor) || 0,
+                    year,
+                    month,
+                    parseInt(item.dealDay) || 0,
+                    parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
+                    parseInt(item.buildYear) || 0,
+                    item.aptDong || '',
+                    item.buyerGbn || '',
+                    item.cdealDay || '',
+                    item.cdealType || '',
+                    item.dealingGbn || '',
+                    item.estateAgentSggNm || '',
+                    item.jibun || '',
+                    item.landLeaseholdGbn || '',
+                    item.rgstDate || '',
+                    item.slerGbn || '',
+                    item.umdNm || ''
+                ]);
+
+                await executeQuery(`
+                    INSERT INTO apt_deal_info 
+                    (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
+                     buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
+                     jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
+                    VALUES ${placeholders}
+                    ON DUPLICATE KEY UPDATE
+                      dealAmount = VALUES(dealAmount),
+                      cdealType = VALUES(cdealType),
+                      cdealDay = VALUES(cdealDay)
+                `, values);
+            } else {
+                const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',\n');
+                const values = batch.flatMap(item => [
+                    regionCode,
+                    item.aptNm || '',
+                    parseFloat(item.excluUseAr) || 0,
+                    parseInt(item.floor) || 0,
+                    year,
+                    month,
+                    parseInt(item.dealDay) || 0,
+                    parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
+                    parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
+                    parseInt(item.buildYear) || 0,
+                    item.aptDong || '',
+                    item.contractType || '',
+                    item.contractTerm || '',
+                    item.jibun || '',
+                    parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
+                    parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
+                    item.useRRRight || '',
+                    item.umdNm || ''
+                ]);
+
+                await executeQuery(`
+                    INSERT INTO apt_rent_info 
+                    (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
+                     monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
+                     jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
+                    VALUES ${placeholders}
+                    ON DUPLICATE KEY UPDATE
+                      monthlyRent = VALUES(monthlyRent),
+                      deposit = VALUES(deposit),
+                      contractType = VALUES(contractType)
+                `, values);
+            }
+            insertedCount += batch.length;
+        } catch (err) {
+            if (!err.message.includes('Duplicate')) {
+                logError(`배치 삽입 오류 (${batch.length}건): ${err.message}`);
+            }
+            // 배치 실패 시 개별 삽입으로 폴백
+            for (const item of batch) {
+                try {
+                    if (type === 'deal') {
+                        await executeQuery(`
+                            INSERT INTO apt_deal_info 
+                            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
+                             buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
+                             jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                              dealAmount = VALUES(dealAmount), cdealType = VALUES(cdealType), cdealDay = VALUES(cdealDay)
+                        `, [
+                            regionCode, item.aptNm || '', parseFloat(item.excluUseAr) || 0, parseInt(item.floor) || 0,
+                            year, month, parseInt(item.dealDay) || 0,
+                            parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
+                            parseInt(item.buildYear) || 0, item.aptDong || '', item.buyerGbn || '',
+                            item.cdealDay || '', item.cdealType || '', item.dealingGbn || '',
+                            item.estateAgentSggNm || '', item.jibun || '', item.landLeaseholdGbn || '',
+                            item.rgstDate || '', item.slerGbn || '', item.umdNm || ''
+                        ]);
+                    } else {
+                        await executeQuery(`
+                            INSERT INTO apt_rent_info 
+                            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
+                             monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
+                             jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                              monthlyRent = VALUES(monthlyRent), deposit = VALUES(deposit), contractType = VALUES(contractType)
+                        `, [
+                            regionCode, item.aptNm || '', parseFloat(item.excluUseAr) || 0, parseInt(item.floor) || 0,
+                            year, month, parseInt(item.dealDay) || 0,
+                            parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
+                            parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
+                            parseInt(item.buildYear) || 0, item.aptDong || '', item.contractType || '',
+                            item.contractTerm || '', item.jibun || '',
+                            parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
+                            parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
+                            item.useRRRight || '', item.umdNm || ''
+                        ]);
+                    }
+                    insertedCount++;
+                } catch (innerErr) {
+                    if (!innerErr.message.includes('Duplicate')) {
+                        logError(`개별 삽입 오류: ${innerErr.message}`);
+                    }
                 }
             }
+        }
+
+        // 배치 간 딜레이 (DB 부하 분산)
+        if (i + BATCH_SIZE < items.length) {
+            await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
         }
     }
 
