@@ -21,6 +21,12 @@ const __dirname = path.dirname(__filename);
 // 동기화 스크립트 경로
 const SYNC_SCRIPT = path.join(__dirname, '..', 'scripts', 'data-loader', '06_daily_sync.js');
 
+// 동기화 타임아웃 (30분)
+const SYNC_TIMEOUT_MS = 30 * 60 * 1000;
+
+// 등록된 cron 작업 목록 (graceful shutdown용)
+const cronJobs = [];
+
 // 동기화 상태 관리
 const syncState = {
   isRunning: false,
@@ -66,6 +72,13 @@ function runSync(mode) {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     });
 
+    // 타임아웃 타이머 (30분)
+    const timer = setTimeout(() => {
+      console.error(`[Scheduler] ⏰ ${mode} 동기화 타임아웃 (${SYNC_TIMEOUT_MS / 60000}분), 강제 종료...`);
+      syncState.lastResult[mode] = `timeout (${SYNC_TIMEOUT_MS / 60000}min)`;
+      child.kill('SIGTERM');
+    }, SYNC_TIMEOUT_MS);
+
     // 자식 프로세스 stdout/stderr를 서버 로그에 출력
     child.stdout.on('data', (data) => {
       const lines = data.toString().trim().split('\n');
@@ -82,13 +95,17 @@ function runSync(mode) {
     });
 
     child.on('close', (code) => {
+      clearTimeout(timer);
       const endTime = new Date();
       const elapsed = ((endTime - startTime) / 60000).toFixed(1);
       
       syncState.isRunning = false;
       syncState.currentMode = null;
       syncState.lastRun[mode] = endTime.toISOString();
-      syncState.lastResult[mode] = code === 0 ? 'success' : `failed (exit code: ${code})`;
+      // 타임아웃으로 이미 기록된 경우 덮어쓰지 않음
+      if (syncState.lastResult[mode] !== `timeout (${SYNC_TIMEOUT_MS / 60000}min)`) {
+        syncState.lastResult[mode] = code === 0 ? 'success' : `failed (exit code: ${code})`;
+      }
 
       if (code === 0) {
         console.log(`[Scheduler] ✅ ${mode} 동기화 완료 (${elapsed}분)`);
@@ -100,6 +117,7 @@ function runSync(mode) {
     });
 
     child.on('error', (err) => {
+      clearTimeout(timer);
       syncState.isRunning = false;
       syncState.currentMode = null;
       syncState.lastResult[mode] = `error: ${err.message}`;
@@ -124,31 +142,33 @@ export function initScheduler(options = {}) {
   console.log('[Scheduler]    - Daily: 매일 04:00 KST (최근 3개월 동기화)');
   console.log('[Scheduler]    - Weekly: 매주 월요일 03:00 KST (최근 6개월 + 보완)');
 
-  // 매일 새벽 4시 (KST = UTC+9, so UTC 19:00 = KST 04:00)
-  // node-cron은 시스템 시간대를 따르므로, 서버가 UTC면 19시로 설정
-  // AppPass 컨테이너가 UTC 기준이면 timezone 옵션 사용
-  cron.schedule('0 4 * * *', async () => {
+  // 매일 새벽 4시 (KST)
+  const dailyJob = cron.schedule('0 4 * * *', async () => {
     console.log('[Scheduler] ⏰ Daily sync cron triggered');
     try {
       await runSync('daily');
     } catch (err) {
+      syncState.lastResult['daily'] = `cron error: ${err.message}`;
       console.error('[Scheduler] Daily sync error:', err.message);
     }
   }, {
     timezone: 'Asia/Seoul',
   });
+  cronJobs.push(dailyJob);
 
   // 매주 월요일 새벽 3시 (KST)
-  cron.schedule('0 3 * * 1', async () => {
+  const weeklyJob = cron.schedule('0 3 * * 1', async () => {
     console.log('[Scheduler] ⏰ Weekly sync cron triggered');
     try {
       await runSync('weekly');
     } catch (err) {
+      syncState.lastResult['weekly'] = `cron error: ${err.message}`;
       console.error('[Scheduler] Weekly sync error:', err.message);
     }
   }, {
     timezone: 'Asia/Seoul',
   });
+  cronJobs.push(weeklyJob);
 
   console.log('[Scheduler] ✅ Cron 스케줄 등록 완료');
 
@@ -159,11 +179,31 @@ export function initScheduler(options = {}) {
       try {
         await runSync('daily');
       } catch (err) {
+        syncState.lastResult['daily'] = `startup error: ${err.message}`;
         console.error('[Scheduler] Startup sync error:', err.message);
       }
     }, startupDelay);
   }
 }
+
+/**
+ * 스케줄러 정지 (graceful shutdown)
+ * 등록된 모든 cron 작업을 중지합니다.
+ */
+export function stopScheduler() {
+  console.log(`[Scheduler] 🛑 스케줄러 정지 중... (${cronJobs.length}개 작업)`);
+  cronJobs.forEach(job => job.stop());
+  console.log('[Scheduler] ✅ 스케줄러 정지 완료');
+}
+
+// 프로세스 종료 시 정리
+process.on('SIGTERM', () => {
+  stopScheduler();
+});
+
+process.on('SIGINT', () => {
+  stopScheduler();
+});
 
 /**
  * 동기화 상태 반환 (API 엔드포인트용)

@@ -31,22 +31,26 @@ const handle = app.getRequestHandler();
 
 // MySQL 연결 설정 완료 (mysql.ts에서 관리)
 
-// 공공데이터 API 키
-const SERVICE_KEY = process.env.SERVICE_KEY || "PofsBo9KhzreP4I5ULYO0sqoysrTnQGpozz8JfdTSltOOYpJALPKFhZncnaL/bD8hsFzbNxSWZlbBhowKedMEw==";
+// 공공데이터 API 키 (환경변수 필수)
+const SERVICE_KEY = process.env.SERVICE_KEY;
+if (!SERVICE_KEY) {
+  console.error('❌ [STARTUP] SERVICE_KEY 환경변수가 설정되지 않았습니다');
+  process.exit(1);
+}
 
 // 지역 데이터 로드
 console.log('📄 [DATA] Loading regions data...');
 const regionsPath = path.join(__dirname, "regions.json");
 console.log('📄 [DATA] Regions file path:', regionsPath);
 
+let regions;
 try {
-  const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
+  regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
   console.log('✅ [DATA] Regions data loaded successfully');
 } catch (error) {
   console.error('❌ [DATA] Failed to load regions.json:', error.message);
   process.exit(1);
 }
-const regions = JSON.parse(fs.readFileSync(regionsPath, "utf-8"));
 
 // LAWD_CD.txt 파일 파싱하여 시도-시군구별 동 매핑 생성
 console.log('📄 [DATA] Loading LAWD_CD data...');
@@ -127,14 +131,14 @@ console.log('📊 [DATA] Number of sido-sigungu combinations:', Object.keys(sido
 const regionsLawdPath = path.join(__dirname, "regions_with_lawdcd.json");
 console.log('📄 [DATA] Regions LAWD file path:', regionsLawdPath);
 
+let regionsLawd;
 try {
-  const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
+  regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
   console.log('✅ [DATA] Regions LAWD data loaded successfully');
 } catch (error) {
   console.error('❌ [DATA] Failed to load regions_with_lawdcd.json:', error.message);
   process.exit(1);
 }
-const regionsLawd = JSON.parse(fs.readFileSync(regionsLawdPath, "utf-8"));
 
 // 시군구명 → lawd_cd 매핑 함수 (lawd_cd 직접 전달도 허용)
 function getLawdCd(sido, sigungu) {
@@ -178,8 +182,12 @@ app.prepare().then(() => {
     });
   });
 
-  // 동기화 스케줄러 상태 확인 API
+  // 동기화 스케줄러 상태 확인 API (ADMIN_KEY 설정 시 인증 필요)
   server.get('/api/sync/status', (req, res) => {
+    const adminKey = process.env.ADMIN_KEY;
+    if (adminKey && req.headers['x-admin-key'] !== adminKey) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     res.status(200).json(getSyncStatus());
   });
 
@@ -490,11 +498,15 @@ app.prepare().then(() => {
     console.log(`💓 [SERVER] Health check at http://0.0.0.0:${port}/health`);
     console.log('✨ [SERVER] Ready to receive requests!');
 
-    // 🕐 서버 내장 스케줄러 시작
-    initScheduler({
-      runOnStartup: true,    // 배포 직후 즉시 1회 실행
-      startupDelay: 15000,   // 서버 완전 구동 후 15초 대기 후 실행
-    });
+    // 🕐 서버 내장 스케줄러 시작 (운영 환경 또는 명시적 활성화 시에만)
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_SCHEDULER === 'true') {
+      initScheduler({
+        runOnStartup: true,    // 배포 직후 즉시 1회 실행
+        startupDelay: 15000,   // 서버 완전 구동 후 15초 대기 후 실행
+      });
+    } else {
+      console.log('[Scheduler] ⏭️ 개발 모드 - 스케줄러 비활성화 (ENABLE_SCHEDULER=true로 활성화)');
+    }
   });
 }).catch(error => {
   console.error('❌ [NEXT] Failed to prepare Next.js app:', error);

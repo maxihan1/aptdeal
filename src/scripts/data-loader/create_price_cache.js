@@ -61,6 +61,8 @@ LEFT JOIN (
         COUNT(*) as deal_count
     FROM apt_name_mapping m
     JOIN apt_deal_info d ON m.deal_apt_name = d.aptNm COLLATE utf8mb4_0900_ai_ci
+        AND m.sgg_cd = d.sggCd
+        AND m.umd_nm = d.umdNm COLLATE utf8mb4_0900_ai_ci
     WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
       AND (d.cdealType IS NULL OR d.cdealType = '')
     GROUP BY m.kapt_code
@@ -72,6 +74,8 @@ LEFT JOIN (
         COUNT(*) as deal_count
     FROM apt_name_mapping m
     JOIN apt_deal_info d ON m.deal_apt_name = d.aptNm COLLATE utf8mb4_0900_ai_ci
+        AND m.sgg_cd = d.sggCd
+        AND m.umd_nm = d.umdNm COLLATE utf8mb4_0900_ai_ci
     WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
       AND (d.cdealType IS NULL OR d.cdealType = '')
     GROUP BY m.kapt_code
@@ -86,6 +90,8 @@ LEFT JOIN (
         MAX(d.dealDate) as latest_date
     FROM apt_name_mapping m
     JOIN apt_deal_info d ON m.deal_apt_name = d.aptNm COLLATE utf8mb4_0900_ai_ci
+        AND m.sgg_cd = d.sggCd
+        AND m.umd_nm = d.umdNm COLLATE utf8mb4_0900_ai_ci
     WHERE d.dealDate >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)
       AND (d.cdealType IS NULL OR d.cdealType = '')
     GROUP BY m.kapt_code
@@ -98,6 +104,8 @@ LEFT JOIN (
         MAX(d.dealDate) as last_date
     FROM apt_name_mapping m
     JOIN apt_deal_info d ON m.deal_apt_name = d.aptNm COLLATE utf8mb4_0900_ai_ci
+        AND m.sgg_cd = d.sggCd
+        AND m.umd_nm = d.umdNm COLLATE utf8mb4_0900_ai_ci
     WHERE (d.cdealType IS NULL OR d.cdealType = '')
     GROUP BY m.kapt_code
 ) last_d ON b.kaptCode COLLATE utf8mb4_0900_ai_ci = last_d.kapt_code COLLATE utf8mb4_0900_ai_ci

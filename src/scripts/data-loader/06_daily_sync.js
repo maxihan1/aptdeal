@@ -114,94 +114,119 @@ async function verifyAndRecoverRegionMonth(regionName, regionCode, year, month, 
     }
 }
 
+// ============================================================
+// 배치 INSERT 설정
+// ============================================================
+const BATCH_SIZE = 50;        // multi-row INSERT 단위
+const BATCH_DELAY_MS = 100;   // 배치 간 딜레이 (DB 부하 분산, ms)
+
+/**
+ * 항목 1건의 INSERT 파라미터 생성
+ * @param {object} item - API 응답 항목
+ * @param {'deal' | 'rent'} type - 데이터 타입
+ * @param {string} regionCode - 지역 코드
+ * @param {number} year - 년도
+ * @param {number} month - 월
+ * @returns {{ columns: string[], placeholder: string, values: any[] }}
+ */
+function buildInsertParams(item, type, regionCode, year, month) {
+    if (type === 'deal') {
+        return {
+            columns: [
+                'sggCd', 'aptNm', 'excluUseAr', 'floor', 'dealYear', 'dealMonth', 'dealDay', 'dealAmount',
+                'buildYear', 'aptDong', 'buyerGbn', 'cdealDay', 'cdealType', 'dealingGbn', 'estateAgentSggNm',
+                'jibun', 'landLeaseholdGbn', 'rgstDate', 'slerGbn', 'umdNm'
+            ],
+            placeholder: '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            upsertClause: 'dealAmount = VALUES(dealAmount), cdealType = VALUES(cdealType), cdealDay = VALUES(cdealDay)',
+            values: [
+                regionCode,
+                item.aptNm || '',
+                parseFloat(item.excluUseAr) || 0,
+                parseInt(item.floor) || 0,
+                year,
+                month,
+                parseInt(item.dealDay) || 0,
+                parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
+                parseInt(item.buildYear) || 0,
+                item.aptDong || '',
+                item.buyerGbn || '',
+                item.cdealDay || '',
+                item.cdealType || '',
+                item.dealingGbn || '',
+                item.estateAgentSggNm || '',
+                item.jibun || '',
+                item.landLeaseholdGbn || '',
+                item.rgstDate || '',
+                item.slerGbn || '',
+                item.umdNm || ''
+            ]
+        };
+    } else {
+        return {
+            columns: [
+                'sggCd', 'aptNm', 'excluUseAr', 'floor', 'dealYear', 'dealMonth', 'dealDay',
+                'monthlyRent', 'deposit', 'buildYear', 'aptDong', 'contractType', 'contractTerm',
+                'jibun', 'preDeposit', 'preMonthlyRent', 'useRRRight', 'umdNm'
+            ],
+            placeholder: '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            upsertClause: 'monthlyRent = VALUES(monthlyRent), deposit = VALUES(deposit), contractType = VALUES(contractType)',
+            values: [
+                regionCode,
+                item.aptNm || '',
+                parseFloat(item.excluUseAr) || 0,
+                parseInt(item.floor) || 0,
+                year,
+                month,
+                parseInt(item.dealDay) || 0,
+                parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
+                parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
+                parseInt(item.buildYear) || 0,
+                item.aptDong || '',
+                item.contractType || '',
+                item.contractTerm || '',
+                item.jibun || '',
+                parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
+                parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
+                item.useRRRight || '',
+                item.umdNm || ''
+            ]
+        };
+    }
+}
+
 /**
  * 데이터 삽입 (배치 UPSERT)
  * - multi-row INSERT로 트랜잭션 수 최소화 (Lock timeout 방지)
  * - 배치 간 딜레이로 DB 부하 분산
+ * - 배치 실패 시 개별 INSERT 폴백 (데이터 유실 방지)
  */
 async function insertData(items, type, regionCode, year, month) {
     if (!items || items.length === 0) return 0;
 
     let insertedCount = 0;
-    const BATCH_SIZE = 50; // multi-row INSERT 단위
-    const BATCH_DELAY_MS = 100; // 배치 간 딜레이 (DB 부하 분산)
+    // 첫 항목에서 메타 정보 추출 (columns, upsertClause는 타입별 동일)
+    const sampleParams = buildInsertParams(items[0], type, regionCode, year, month);
+    const { columns, upsertClause } = sampleParams;
+    const tableName = type === 'deal' ? 'apt_deal_info' : 'apt_rent_info';
 
     for (let i = 0; i < items.length; i += BATCH_SIZE) {
         const batch = items.slice(i, i + BATCH_SIZE);
 
         try {
-            if (type === 'deal') {
-                const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',\n');
-                const values = batch.flatMap(item => [
-                    regionCode,
-                    item.aptNm || '',
-                    parseFloat(item.excluUseAr) || 0,
-                    parseInt(item.floor) || 0,
-                    year,
-                    month,
-                    parseInt(item.dealDay) || 0,
-                    parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
-                    parseInt(item.buildYear) || 0,
-                    item.aptDong || '',
-                    item.buyerGbn || '',
-                    item.cdealDay || '',
-                    item.cdealType || '',
-                    item.dealingGbn || '',
-                    item.estateAgentSggNm || '',
-                    item.jibun || '',
-                    item.landLeaseholdGbn || '',
-                    item.rgstDate || '',
-                    item.slerGbn || '',
-                    item.umdNm || ''
-                ]);
+            // 배치 INSERT
+            const batchParams = batch.map(item => buildInsertParams(item, type, regionCode, year, month));
+            const placeholders = batchParams.map(p => p.placeholder).join(',\n');
+            const values = batchParams.flatMap(p => p.values);
 
-                await executeQuery(`
-                    INSERT INTO apt_deal_info 
-                    (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
-                     buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
-                     jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
-                    VALUES ${placeholders}
-                    ON DUPLICATE KEY UPDATE
-                      dealAmount = VALUES(dealAmount),
-                      cdealType = VALUES(cdealType),
-                      cdealDay = VALUES(cdealDay)
-                `, values);
-            } else {
-                const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',\n');
-                const values = batch.flatMap(item => [
-                    regionCode,
-                    item.aptNm || '',
-                    parseFloat(item.excluUseAr) || 0,
-                    parseInt(item.floor) || 0,
-                    year,
-                    month,
-                    parseInt(item.dealDay) || 0,
-                    parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
-                    parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
-                    parseInt(item.buildYear) || 0,
-                    item.aptDong || '',
-                    item.contractType || '',
-                    item.contractTerm || '',
-                    item.jibun || '',
-                    parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
-                    parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
-                    item.useRRRight || '',
-                    item.umdNm || ''
-                ]);
-
-                await executeQuery(`
-                    INSERT INTO apt_rent_info 
-                    (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
-                     monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
-                     jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
-                    VALUES ${placeholders}
-                    ON DUPLICATE KEY UPDATE
-                      monthlyRent = VALUES(monthlyRent),
-                      deposit = VALUES(deposit),
-                      contractType = VALUES(contractType)
-                `, values);
-            }
-            insertedCount += batch.length;
+            const result = await executeQuery(`
+                INSERT INTO ${tableName} 
+                (${columns.join(', ')})
+                VALUES ${placeholders}
+                ON DUPLICATE KEY UPDATE
+                  ${upsertClause}
+            `, values);
+            insertedCount += result.affectedRows || batch.length;
         } catch (err) {
             if (!err.message.includes('Duplicate')) {
                 logError(`배치 삽입 오류 (${batch.length}건): ${err.message}`);
@@ -209,46 +234,15 @@ async function insertData(items, type, regionCode, year, month) {
             // 배치 실패 시 개별 삽입으로 폴백
             for (const item of batch) {
                 try {
-                    if (type === 'deal') {
-                        await executeQuery(`
-                            INSERT INTO apt_deal_info 
-                            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay, dealAmount, 
-                             buildYear, aptDong, buyerGbn, cdealDay, cdealType, dealingGbn, estateAgentSggNm,
-                             jibun, landLeaseholdGbn, rgstDate, slerGbn, umdNm)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE
-                              dealAmount = VALUES(dealAmount), cdealType = VALUES(cdealType), cdealDay = VALUES(cdealDay)
-                        `, [
-                            regionCode, item.aptNm || '', parseFloat(item.excluUseAr) || 0, parseInt(item.floor) || 0,
-                            year, month, parseInt(item.dealDay) || 0,
-                            parseInt(String(item.dealAmount || '0').replace(/,/g, '')) || 0,
-                            parseInt(item.buildYear) || 0, item.aptDong || '', item.buyerGbn || '',
-                            item.cdealDay || '', item.cdealType || '', item.dealingGbn || '',
-                            item.estateAgentSggNm || '', item.jibun || '', item.landLeaseholdGbn || '',
-                            item.rgstDate || '', item.slerGbn || '', item.umdNm || ''
-                        ]);
-                    } else {
-                        await executeQuery(`
-                            INSERT INTO apt_rent_info 
-                            (sggCd, aptNm, excluUseAr, floor, dealYear, dealMonth, dealDay,
-                             monthlyRent, deposit, buildYear, aptDong, contractType, contractTerm,
-                             jibun, preDeposit, preMonthlyRent, useRRRight, umdNm)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE
-                              monthlyRent = VALUES(monthlyRent), deposit = VALUES(deposit), contractType = VALUES(contractType)
-                        `, [
-                            regionCode, item.aptNm || '', parseFloat(item.excluUseAr) || 0, parseInt(item.floor) || 0,
-                            year, month, parseInt(item.dealDay) || 0,
-                            parseInt(String(item.monthlyRent || '0').replace(/,/g, '')) || 0,
-                            parseInt(String(item.deposit || '0').replace(/,/g, '')) || 0,
-                            parseInt(item.buildYear) || 0, item.aptDong || '', item.contractType || '',
-                            item.contractTerm || '', item.jibun || '',
-                            parseInt(String(item.preDeposit || '0').replace(/,/g, '')) || 0,
-                            parseInt(String(item.preMonthlyRent || '0').replace(/,/g, '')) || 0,
-                            item.useRRRight || '', item.umdNm || ''
-                        ]);
-                    }
-                    insertedCount++;
+                    const params = buildInsertParams(item, type, regionCode, year, month);
+                    const result = await executeQuery(`
+                        INSERT INTO ${tableName} 
+                        (${columns.join(', ')})
+                        VALUES ${params.placeholder}
+                        ON DUPLICATE KEY UPDATE
+                          ${upsertClause}
+                    `, params.values);
+                    insertedCount += result.affectedRows || 1;
                 } catch (innerErr) {
                     if (!innerErr.message.includes('Duplicate')) {
                         logError(`개별 삽입 오류: ${innerErr.message}`);
@@ -265,6 +259,7 @@ async function insertData(items, type, regionCode, year, month) {
 
     return insertedCount;
 }
+
 
 /**
  * 메인 실행
@@ -642,15 +637,18 @@ async function refreshMapCaches() {
 }
 
 /**
- * 주간 전용: 신규 아파트 보완 작업
- * - displayName 업데이트 (카카오 검색)
- * - 좌표 수집 (좌표 없는 단지)
- * - K-apt 매핑 (미매핑 단지)
+ * 주간 전용: 신규 아파트 보완 작업 (5단계 매핑 파이프라인 통합)
+ * 
+ * 1. 호갱노노 크롤링 (21_crawl_hogang_missing.js 인라인 실행)
+ * 2. 5단계 자동 매핑 (sync_mapping.js)
+ * 3. K-apt 미등록 단지 가상 레코드 생성
+ * 4. displayName 업데이트 (카카오 검색, 최대 500개)
+ * 5. 좌표 수집 (최대 300개, 키워드 검색 폴백)
  */
 async function weeklyMaintenanceTasks() {
     console.log(`
 ============================================================
-  🔧 주간 신규 단지 보완 작업 시작
+  🔧 주간 신규 단지 보완 작업 시작 (5단계 매핑 파이프라인)
 ============================================================
 `);
 
@@ -665,8 +663,62 @@ async function weeklyMaintenanceTasks() {
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     try {
-        // 1. displayName이 없는 신규 아파트 업데이트 (최대 200개)
-        log('📝 1단계: displayName이 없는 아파트 업데이트...');
+        // ── 0단계: 호갱노노 크롤링 (사전 데이터 수집) ──
+        log('🕷️ 0단계: 호갱노노 크롤링 (미매핑 단지 데이터 수집)...');
+        try {
+            const { fork } = await import('child_process');
+            const crawlScript = path.join(__dirname, '21_crawl_hogang_missing.js');
+            
+            if (fs.existsSync(crawlScript)) {
+                await new Promise((resolve, reject) => {
+                    const child = fork(crawlScript, ['--limit=200', '--resume'], {
+                        cwd: process.cwd(),
+                        timeout: 600000, // 10분 타임아웃
+                        stdio: 'pipe'
+                    });
+                    child.on('close', (code) => {
+                        if (code === 0) resolve();
+                        else reject(new Error(`크롤링 종료 코드: ${code}`));
+                    });
+                    child.on('error', reject);
+                });
+                log('   ✅ 호갱노노 크롤링 완료');
+            } else {
+                log('   ⚠️ 21_crawl_hogang_missing.js 없음, 스킵');
+            }
+        } catch (e) {
+            logWarning(`   호갱노노 크롤링 오류 (무시하고 계속): ${e.message}`);
+        }
+
+        // ── 1단계: 5단계 자동 매핑 파이프라인 ──
+        log('🔗 1단계: 5단계 자동 매핑 파이프라인 실행...');
+        const {
+            loadMappingData,
+            runMappingPipeline,
+            applyMappings,
+            registerUnmappedToBasicInfo,
+            printMappingStats
+        } = await import('./sync_mapping.js');
+
+        const mappingData = await loadMappingData();
+        const { newMappings, stats, unmappedRemaining } = await runMappingPipeline(mappingData, {
+            stages: [1, 2, 3, 4, 5],
+            kakaoLimit: 300,
+            kakaoKey: KAKAO_REST_API_KEY,
+        });
+
+        const insertedCount = await applyMappings(newMappings, false);
+        printMappingStats(stats, unmappedRemaining.length);
+
+        // ── 2단계: K-apt 미등록 단지 가상 레코드 생성 ──
+        log('🏗️ 2단계: K-apt 미등록 단지 가상 레코드 생성...');
+        const { created: virtualCreated } = await registerUnmappedToBasicInfo(unmappedRemaining, {
+            kakaoKey: KAKAO_REST_API_KEY,
+            limit: 100,
+        });
+
+        // ── 3단계: displayName 업데이트 (최대 500개) ──
+        log('📝 3단계: displayName이 없는 아파트 업데이트...');
 
         const aptsNeedDisplayName = await executeQuery(`
             SELECT si.id, si.aptNm, si.umdNm, si.kapt_code,
@@ -675,7 +727,7 @@ async function weeklyMaintenanceTasks() {
             LEFT JOIN apt_basic_info b ON si.kapt_code COLLATE utf8mb4_unicode_ci = b.kaptCode COLLATE utf8mb4_unicode_ci
             WHERE si.displayName IS NULL 
             ORDER BY si.dealCount DESC
-            LIMIT 200
+            LIMIT 500
         `);
 
         let displayNameUpdated = 0;
@@ -696,7 +748,6 @@ async function weeklyMaintenanceTasks() {
                         await executeQuery(`UPDATE apt_search_index SET displayName = ? WHERE id = ?`, [displayName, apt.id]);
                         displayNameUpdated++;
                     } else {
-                        // 카카오 미검색 시 aptNm 사용
                         await executeQuery(`UPDATE apt_search_index SET displayName = ? WHERE id = ?`, [apt.aptNm, apt.id]);
                     }
                 }
@@ -707,34 +758,56 @@ async function weeklyMaintenanceTasks() {
         }
         log(`   ✅ displayName 업데이트: ${displayNameUpdated}/${aptsNeedDisplayName.length}개`);
 
-        // 2. 좌표가 없는 아파트에 좌표 추가 (최대 100개)
-        log('📍 2단계: 좌표가 없는 아파트에 좌표 추가...');
+        // ── 4단계: 좌표 수집 (최대 300개, 키워드 검색 폴백) ──
+        log('📍 4단계: 좌표가 없는 아파트에 좌표 추가...');
 
         const aptsNeedCoords = await executeQuery(`
             SELECT kaptCode, kaptName, kaptAddr 
             FROM apt_basic_info 
             WHERE (latitude IS NULL OR longitude IS NULL)
             AND kaptAddr IS NOT NULL AND kaptAddr != ''
-            LIMIT 100
+            LIMIT 300
         `);
 
         let coordsUpdated = 0;
         for (const apt of aptsNeedCoords) {
             try {
-                const response = await fetch(
+                // 주소 검색 시도
+                let found = false;
+                const addrResponse = await fetch(
                     `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(apt.kaptAddr)}`,
                     { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }
                 );
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.documents && data.documents.length > 0) {
-                        const doc = data.documents[0];
+                if (addrResponse.ok) {
+                    const addrData = await addrResponse.json();
+                    if (addrData.documents && addrData.documents.length > 0) {
+                        const doc = addrData.documents[0];
                         await executeQuery(
                             `UPDATE apt_basic_info SET latitude = ?, longitude = ? WHERE kaptCode = ?`,
                             [parseFloat(doc.y), parseFloat(doc.x), apt.kaptCode]
                         );
                         coordsUpdated++;
+                        found = true;
+                    }
+                }
+
+                // 주소 검색 실패 시 키워드 검색 폴백
+                if (!found) {
+                    const kwResponse = await fetch(
+                        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(apt.kaptName + ' 아파트')}&size=1`,
+                        { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }
+                    );
+                    if (kwResponse.ok) {
+                        const kwData = await kwResponse.json();
+                        if (kwData.documents && kwData.documents.length > 0) {
+                            const doc = kwData.documents[0];
+                            await executeQuery(
+                                `UPDATE apt_basic_info SET latitude = ?, longitude = ? WHERE kaptCode = ?`,
+                                [parseFloat(doc.y), parseFloat(doc.x), apt.kaptCode]
+                            );
+                            coordsUpdated++;
+                        }
                     }
                 }
                 await sleep(100);
@@ -744,47 +817,15 @@ async function weeklyMaintenanceTasks() {
         }
         log(`   ✅ 좌표 업데이트: ${coordsUpdated}/${aptsNeedCoords.length}개`);
 
-        // 3. kapt_code가 없는 아파트에 K-apt 매핑 시도 (지번 기반, 최대 100개)
-        log('🔗 3단계: K-apt 미매핑 아파트 매핑 시도...');
-
-        const unmappedApts = await executeQuery(`
-            SELECT id, aptNm, umdNm, sggCd, jibun
-            FROM apt_search_index
-            WHERE (kapt_code IS NULL OR kapt_code = 'UNMAPPED')
-            AND jibun IS NOT NULL AND jibun != ''
-            LIMIT 100
-        `);
-
-        let mapped = 0;
-        for (const apt of unmappedApts) {
-            try {
-                // 지번 기반으로 apt_basic_info에서 매칭 시도
-                const matches = await executeQuery(`
-                    SELECT kaptCode, kaptName
-                    FROM apt_basic_info
-                    WHERE kaptAddr LIKE CONCAT('%', ?, '%')
-                    LIMIT 1
-                `, [apt.jibun]);
-
-                if (matches.length > 0) {
-                    await executeQuery(
-                        `UPDATE apt_search_index SET kapt_code = ? WHERE id = ?`,
-                        [matches[0].kaptCode, apt.id]
-                    );
-                    mapped++;
-                }
-            } catch (e) {
-                // 개별 오류 무시
-            }
-        }
-        log(`   ✅ K-apt 매핑: ${mapped}/${unmappedApts.length}개`);
-
+        const totalMapped = stats.stage1 + stats.stage2 + stats.stage2_5 + stats.stage3 + stats.stage4 + stats.stage5;
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`
 [${new Date().toISOString()}] ✅ 주간 보완 작업 완료 (${elapsed}초)
+   - 자동 매핑: ${totalMapped}건 (신규 INSERT: ${insertedCount}건)
+   - 가상 레코드: ${virtualCreated}건
    - displayName: ${displayNameUpdated}개
    - 좌표: ${coordsUpdated}개
-   - K-apt 매핑: ${mapped}개
+   - 미매핑 잔여: ${unmappedRemaining.length}개
 `);
 
     } catch (error) {
